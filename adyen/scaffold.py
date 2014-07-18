@@ -10,34 +10,29 @@ from .gateway import Constants
 class Scaffold():
 
     def __init__(self, order_data=None):
-        pass
-
-        # self.facade = Facade()
-        # try:
-        #     for name, value in order_data.items():
-        #         setattr(self, name, value)
-        # except AttributeError:
-        #     pass
+        self.facade = Facade()
+        try:
+            for name, value in order_data.items():
+                setattr(self, name, value)
+        except AttributeError:
+            pass
 
     def get_form_action(self):
         """ Return the URL where the payment form should be submitted. """
-        pass
-
-        # try:
-        #     return settings.BE2BILL_PRIMARY_URL
-        # except AttributeError:
-        #     raise ImproperlyConfigured("Please set BE2BILL_PRIMARY_URL")
+        try:
+            return settings.ADYEN_ACTION_URL
+        except AttributeError:
+            raise ImproperlyConfigured("Please set ADYEN_ACTION_URL")
 
     def get_form_fields(self):
         """ Return the payment form fields, rendered into HTML. """
-        pass
 
-        # fields_list = self.get_form_fields_list()
-        # return ''.join([
-        #     '<input type="%s" name="%s" value="%s">\n' % (
-        #         f.get('type'), f.get('name'), f.get('value')
-        #     ) for f in fields_list
-        # ])
+        fields_list = self.get_form_fields_list()
+        return ''.join([
+            '<input type="%s" name="%s" value="%s">\n' % (
+                f.get('type'), f.get('name'), f.get('value')
+            ) for f in fields_list
+        ])
 
     def get_form_fields_list(self):
         """ Return the payment form fields as a list of dicts. """
