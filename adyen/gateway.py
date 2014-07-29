@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import base64
 import hashlib
+import hmac
 import logging
-import requests
 
 from urllib.parse import parse_qs
 
@@ -12,7 +13,45 @@ logger = logging.getLogger('adyen')
 # ---[ CONSTANTS ]---
 
 class Constants:
-    pass
+
+    IDENTIFIER = 'identifier'
+    SECRET_KEY = 'secret_key'
+    ACTION_URL = 'action_url'
+
+    MERCHANT_ACCOUNT = 'merchantAccount'
+    MERCHANT_REFERENCE = 'merchantReference'
+    MERCHANT_RETURN_DATA = 'merchantReturnData'
+    MERCHANT_SIG = 'merchantSig'
+
+    SHOPPER_EMAIL = 'shopperEmail'
+    SHOPPER_LOCALE = 'shopperLocale'
+    SHOPPER_REFERENCE = 'shopperReference'
+    SHOPPER_STATEMENT = 'shopperStatement'
+    SHOPPER_TYPE = 'shopperType'
+
+    COUNTRY_CODE = 'countryCode'
+    CURRENCY_CODE = 'currencyCode'
+    PAYMENT_AMOUNT = 'paymentAmount'
+
+    SKIN_CODE = 'skinCode'
+    SHIP_BEFORE_DATE = 'shipBeforeDate'
+    SESSION_VALIDITY = 'sessionValidity'
+
+    PSP_REFERENCE = 'pspReference'
+    AUTH_RESULT = 'authResult'
+
+    PAYMENT_RESULT_AUTHORISED = 'AUTHORISED'
+    PAYMENT_RESULT_REFUSED = 'REFUSED'
+    PAYMENT_RESULT_CANCELLED = 'CANCELLED'
+    PAYMENT_RESULT_PENDING = 'PENDING'
+    PAYMENT_RESULT_ERROR = 'ERROR'
+
+    ALLOWED_METHODS = 'allowedMethods'
+    BLOCKED_METHODS = 'blockedMethods'
+    RECURRING_CONTRACT = 'recurringContract'
+    BILLING_ADDRESS_TYPE = 'billingAddressType'
+    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
+    OFFSET = 'offset'
 
 
 # ---[ EXCEPTIONS ]---
@@ -35,90 +74,66 @@ class InvalidTransactionException(ValueError):
 
 # ---[ GATEWAY ]---
 
-class Gateway():
+class Gateway:
 
     MANDATORY_SETTINGS = (
         Constants.IDENTIFIER,
-        Constants.PASSWORD,
-        Constants.PRIMARY_URL,
-        Constants.SECONDARY_URL,
+        Constants.SECRET_KEY,
+        Constants.ACTION_URL,
     )
 
     def __init__(self, settings={}):
         """ Initialize an Adyen gateway. """
 
-        self.identifier = settings.get('identifier', None)
-        self.password = settings.get('password', None)
-        self.action_url = settings.get('primary_url', None)
+        self.identifier = settings.get(Constants.IDENTIFIER, None)
+        self.secret_key = settings.get(Constants.SECRET_KEY, None)
+        self.action_url = settings.get(Constants.ACTION_URL, None)
 
-        if self.identifier is None or self.password is None or self.action_url is None:
+        if self.identifier is None or self.secret_key is None or self.action_url is None:
 
             raise MissingParameterException(
                 "You need to specify the following parameters to initialize "
-                "the Adyen gateway: identifier, password, action_url. "
+                "the Adyen gateway: identifier, secret_key, action_url. "
                 "Please check your configuration."
             )
 
-    def _compute_hash(self, params_dict):
-        password = self.password
-        parameters = sorted([
-            '%s=%s' % (key, value) for key, value in params_dict.items()
-        ])
-        clear_str = password + password.join(parameters) + password
-        return hashlib.sha256(clear_str.encode('utf-8')).hexdigest()
+    def _compute_hash(self, keys, params):
 
-    def _build_form_fields(self, adyen_request, create_alias=False):
+        signature = ''
+        for key in keys:
+            signature += str(params.get(key, ''))
+        hm = hmac.new(self.secret_key.encode(), signature.encode(), hashlib.sha1)
+        return base64.encodebytes(hm.digest()).strip().decode('utf-8')
+
+    def _build_form_fields(self, adyen_request):
         """ Return the hidden fields of an HTML form
         allowing to perform this request. """
-        return adyen_request.build_form_fields(create_alias)
+        return adyen_request.build_form_fields()
 
-    def build_payment_form_fields(self, params, create_alias=False):
-        params.update({
-            Constants.OPERATIONTYPE: Constants.OPERATIONTYPE_PAYMENT,
-        })
-        return self._build_form_fields(
-            PaymentFormRequest(self, params), create_alias
-        )
-
-    def _send_request(self, adyen_request, create_alias=False):
-        """ Perform an Adyen request directly. """
-        return adyen_request.send(create_alias)
-
-    def send_payment_request(self, params, create_alias=False):
-        params.update({
-            Constants.OPERATIONTYPE: Constants.OPERATIONTYPE_PAYMENT,
-        })
-        return self._send_request(
-            PaymentDirectRequest(self, params), create_alias
-        )
+    def build_payment_form_fields(self, params):
+        return self._build_form_fields(PaymentFormRequest(self, params))
 
     def _process_response(self, adyen_response, query_string):
         """ Process an Adyen response. """
         return adyen_response.process()
 
     def process_payment_response(self, query_string):
-        return self._process_response(
-            PaymentResponse(self, query_string)
-        )
+        return self._process_response(PaymentResponse(self, query_string))
 
 
 # ---[ REQUESTS ]---
 
-class BaseRequest(object):
+class BaseRequest:
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
 
     def __init__(self, client, params={}):
         self.client = client
-        self.params = {
-            Constants.IDENTIFIER: self.client.identifier,
-            Constants.VERSION: Constants.API_VERSION,
-        }
-        self.params.update(params)
+        self.params = params
         self._validate()
 
         # compute request hash
-        self.params.update({Constants.HASH: self._hash()})
+        self.params.update({Constants.MERCHANT_SIG: self._hash()})
 
     def _validate(self):
 
@@ -138,108 +153,109 @@ class BaseRequest(object):
                 )
 
     def _hash(self):
-        return self.client._compute_hash(self.params)
+        return self.client._compute_hash(self.HASH_KEYS, self.params)
 
 
 # ---[ FORM-BASED REQUESTS ]---
 
 class FormRequest(BaseRequest):
-
-    def build_form_fields(self, create_alias=False):
-        if create_alias:
-            self.params.update({
-                Constants.CREATEALIAS: Constants.YES,
-            })
+    def build_form_fields(self):
         return [{'type': 'hidden', 'name': name, 'value': value}
             for name, value in self.params.items()]
 
-"""
-<input type="hidden" name="merchantReference" value="Internet Order 12345" />                       = ORDER ID
-<input type="hidden" name="paymentAmount" value="100" />                                            = AMOUNT IN CENTS
-<input type="hidden" name="currencyCode" value="EUR" />                                             = CURRENCY CODE
-<input type="hidden" name="shipBeforeDate" value="2013-12-03" />                                    ---> mandatory, strangely enough
-<input type="hidden" name="skinCode" value="TOuEXu2m" />                                            ---> only if multiple skins exist (not our case?)
-<input type="hidden" name="merchantAccount" value="SupportAdyenDemo" />                             = ADYEN IDENTIFIER
-<input type="hidden" name="countryCode" value="be" />                                               = COUNTRY
-<input type="hidden" name="shopperLocale" value="be_NL" />                                          = LOCALE
-<input type="hidden" name="sessionValidity" value="2014-09-23T12:09:39Z" />                         --> at what time must the payment have been made
-<input type="hidden" name="merchantSig" value="3iWDU/V5RMtdaiZC4YRIpoX9/v0=" />                     = VALIDATION HASH
-<input type="hidden" name="shopperEmail" value="test102@gmail.com" />                               = CUSTOMER EMAIL
-<input type="hidden" name="shopperReference" value="test102@gmail.com" />                           = CUSTOMER ID
-"""
 
 class PaymentFormRequest(FormRequest):
     REQUIRED_FIELDS = (
-        Constants.IDENTIFIER, Constants.OPERATIONTYPE,
-        Constants.CLIENTIDENT, Constants.DESCRIPTION,
-        Constants.ORDERID, Constants.VERSION,
-        Constants.AMOUNT,
+        Constants.MERCHANT_ACCOUNT,
+        Constants.MERCHANT_REFERENCE,
+        Constants.SHOPPER_REFERENCE,
+        Constants.SHOPPER_EMAIL,
+        Constants.SHOPPER_LOCALE,
+        Constants.COUNTRY_CODE,
+        Constants.CURRENCY_CODE,
+        Constants.PAYMENT_AMOUNT,
+        Constants.SESSION_VALIDITY,
+        Constants.SHIP_BEFORE_DATE,
     )
     OPTIONAL_FIELDS = (
-        Constants.CARDTYPE, Constants.CLIENTEMAIL,
-        Constants.CARDFULLNAME, Constants.LANGUAGE,
-        Constants.EXTRADATA, Constants.CLIENTDOB,
-        Constants.CLIENTADDRESS, Constants.CREATEALIAS,
-        Constants._3DSECURE, Constants._3DSECUREDISPLAYMODE,
-        Constants.USETEMPLATE, Constants.HIDECLIENTEMAIL,
-        Constants.HIDECARDFULLNAME,
+        Constants.MERCHANT_SIG,
+        Constants.SKIN_CODE,
+        Constants.RECURRING_CONTRACT,
+        Constants.ALLOWED_METHODS,
+        Constants.BLOCKED_METHODS,
+        Constants.SHOPPER_STATEMENT,
+        Constants.MERCHANT_RETURN_DATA,
+        Constants.BILLING_ADDRESS_TYPE,
+        Constants.DELIVERY_ADDRESS_TYPE,
+        Constants.SHOPPER_TYPE,
+        Constants.OFFSET,
+    )
+    HASH_KEYS = (
+        Constants.PAYMENT_AMOUNT,
+        Constants.CURRENCY_CODE,
+        Constants.SHIP_BEFORE_DATE,
+        Constants.MERCHANT_REFERENCE,
+        Constants.SKIN_CODE,
+        Constants.MERCHANT_ACCOUNT,
+        Constants.SESSION_VALIDITY,
+        Constants.SHOPPER_EMAIL,
+        Constants.SHOPPER_REFERENCE,
+        Constants.RECURRING_CONTRACT,
+        Constants.ALLOWED_METHODS,
+        Constants.BLOCKED_METHODS,
+        Constants.SHOPPER_STATEMENT,
+        Constants.MERCHANT_RETURN_DATA,
+        Constants.BILLING_ADDRESS_TYPE,
+        Constants.DELIVERY_ADDRESS_TYPE,
+        Constants.SHOPPER_TYPE,
+        Constants.OFFSET
     )
 
 
 # ---[ RESPONSES ]---
 
-class BaseResponse(object):
+class BaseResponse:
     REQUIRED_FIELDS = ()
 
     def __init__(self, client, query_string):
         self.client = client
-        self.password = client.password
-        self.query = parse_qs(query_string, keep_blank_values=True)
-        self.query = {key: value[0] for (key, value) in self.query.items()}
+        self.secret_key = client.secret_key
+        self.params = parse_qs(query_string, keep_blank_values=True)
+        self.params = {key: value[0] for (key, value) in self.params.items()}
 
-    def validate(self):
+    def _validate(self):
 
-        # check that all mandatory fields are present
+        # Check that all mandatory fields are present.
         for field_name in self.REQUIRED_FIELDS:
-            if field_name not in self.query:
+            if field_name not in self.params:
                 raise MissingFieldException(
                     "The %s field is missing" % field_name
                 )
 
-        # check that the transaction has not been tampered with
-        received_hash = self.query.pop(Constants.HASH)
-        expected_hash = self.client._compute_hash(self.query)
+        # Check that the transaction has not been tampered with.
+        received_hash = self.params.pop(Constants.MERCHANT_SIG)
+        expected_hash = self._hash()
         if expected_hash != received_hash:
             raise InvalidTransactionException(
                 "The transaction is invalid. "
                 "This may indicate a fraud attempt."
             )
 
+    def _hash(self):
+        return self.client._compute_hash(self.HASH_KEYS, self.params)
+
     def process(self):
-        exec_code = self.query.get(Constants.EXECCODE, '')
-        accepted = exec_code == Constants.EXECCODE_ACCEPTED
-        return accepted, self.query
+        payment_result = self.params.get(Constants.AUTH_RESULT, None)
+        accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
+        return accepted, self.params
 
 
 class PaymentResponse(BaseResponse):
     REQUIRED_FIELDS = (
-        Constants.CARDCOUNTRY,
-        Constants.OPERATIONTYPE,
-        Constants._3DSECURE,
-        Constants.EXTRADATA,
-        Constants.EXECCODE,
-        Constants.LANGUAGE,
-        Constants.CARDCODE,
-        Constants.HASH,
-        Constants.CURRENCY,
-        Constants.CLIENTIDENT,
-        Constants.ALIAS,
-        Constants.ORDERID,
-        Constants.CLIENTEMAIL,
-        Constants.VERSION,
-        Constants.TRANSACTIONID,
-        Constants.AMOUNT,
-        Constants.DESCRIPTOR,
-        Constants.IDENTIFIER,
-        Constants.MESSAGE,
+        Constants.AUTH_RESULT,
+        Constants.PSP_REFERENCE,
+        Constants.MERCHANT_REFERENCE,
+        Constants.SKIN_CODE,
+        Constants.MERCHANT_RETURN_DATA,
     )
+    HASH_KEYS = REQUIRED_FIELDS

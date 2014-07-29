@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils import timezone
 
 from .facade import Facade
 from .gateway import Constants
@@ -35,18 +36,32 @@ class Scaffold():
         ])
 
     def get_form_fields_list(self):
-        """ Return the payment form fields as a list of dicts. """
-        pass
+        """
+        Return the payment form fields as a list of dicts.
+        """
 
-        # return self.facade.build_payment_form_fields({
-        #     Constants.CLIENTIDENT: self.client_id,
-        #     Constants.ORDERID: self.order_id,
-        #     Constants.AMOUNT: self.amount,
-        #     Constants.DESCRIPTION: self.description,
-        # })
+        now = timezone.now()
+        session_validity = now + timezone.timedelta(days=1)
+        session_validity_format = '%Y-%m-%dT%H:%M:%SZ'
+        ship_before_date = now + timezone.timedelta(days=30)
+        ship_before_date_format = '%Y-%m-%d'
+
+        return self.facade.build_payment_form_fields({
+            Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
+            Constants.MERCHANT_REFERENCE: self.order_id,
+            Constants.SHOPPER_REFERENCE: self.client_id,
+            Constants.SHOPPER_EMAIL: self.client_email,
+            Constants.SHOPPER_LOCALE: self.locale,
+            Constants.COUNTRY_CODE: self.country_code,
+            Constants.CURRENCY_CODE: self.currency_code,
+            Constants.PAYMENT_AMOUNT: self.amount,
+            Constants.SKIN_CODE: settings.ADYEN_SKIN_CODE,
+            Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
+            Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
+        })
 
     def handle_payment_feedback(self, request):
-        """ Handle the post-payment process. """
-        pass
-
-        # return self.facade.handle_payment_feedback(request)
+        """
+        Handle the post-payment process.
+        """
+        return self.facade.handle_payment_feedback(request)

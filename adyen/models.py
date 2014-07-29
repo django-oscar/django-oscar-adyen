@@ -14,11 +14,11 @@ class AdyenTransaction(models.Model):
     order_number = models.CharField(max_length=255, db_index=True)
 
     reference = models.CharField(max_length=255)
-    method = models.CharField(max_length=255, default=Constants.OPERATIONTYPE_PAYMENT)
+    method = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=255, blank=True)
 
     amount = models.DecimalField(decimal_places=2, max_digits=12, blank=True, null=True)
-    currency = models.CharField(max_length=3, default=settings.ADYEN_CURRENCY)
+    currency = models.CharField(max_length=3, default='EUR')
 
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     date_created = models.DateTimeField(default=timezone.now)
@@ -38,8 +38,8 @@ class AdyenTransaction(models.Model):
 
     @property
     def accepted(self):
-        return self.status == Constants.STATUS_ACCEPTED
+        return self.status == Constants.PAYMENT_RESULT_AUTHORISED
 
     @property
     def declined(self):
-        return self.status == Constants.STATUS_DECLINED
+        return self.status == Constants.PAYMENT_RESULT_REFUSED
