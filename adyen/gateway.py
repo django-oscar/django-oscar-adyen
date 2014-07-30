@@ -46,6 +46,7 @@ class Constants:
     PAYMENT_RESULT_PENDING = 'PENDING'
     PAYMENT_RESULT_ERROR = 'ERROR'
 
+    PAYMENT_METHOD = 'paymentMethod'
     ALLOWED_METHODS = 'allowedMethods'
     BLOCKED_METHODS = 'blockedMethods'
     RECURRING_CONTRACT = 'recurringContract'
@@ -98,12 +99,13 @@ class Gateway:
             )
 
     def _compute_hash(self, keys, params):
-
         signature = ''
         for key in keys:
-            signature += str(params.get(key, ''))
+            value = str(params.get(key, ''))
+            signature += value
         hm = hmac.new(self.secret_key.encode(), signature.encode(), hashlib.sha1)
-        return base64.encodebytes(hm.digest()).strip().decode('utf-8')
+        hash_ = base64.encodebytes(hm.digest()).strip().decode('utf-8')
+        return hash_
 
     def _build_form_fields(self, adyen_request):
         """ Return the hidden fields of an HTML form
@@ -130,21 +132,21 @@ class BaseRequest:
     def __init__(self, client, params={}):
         self.client = client
         self.params = params
-        self._validate()
+        self.validate()
 
-        # compute request hash
-        self.params.update({Constants.MERCHANT_SIG: self._hash()})
+        # Compute request hash.
+        self.params.update({Constants.MERCHANT_SIG: self.hash()})
 
-    def _validate(self):
+    def validate(self):
 
-        # check that all mandatory fields are present
+        # Check that all mandatory fields are present.
         for field_name in self.REQUIRED_FIELDS:
             if field_name not in self.params:
                 raise MissingFieldException(
                     "The %s field is missing" % field_name
                 )
 
-        # check that no unexpected field has been passed
+        # Check that no unexpected field has been passed.
         expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
         for field_name in self.params.keys():
             if field_name not in expected_fields:
@@ -152,7 +154,7 @@ class BaseRequest:
                     "The %s field is unexpected" % field_name
                 )
 
-    def _hash(self):
+    def hash(self):
         return self.client._compute_hash(self.HASH_KEYS, self.params)
 
 
@@ -223,7 +225,7 @@ class BaseResponse:
         self.params = parse_qs(query_string, keep_blank_values=True)
         self.params = {key: value[0] for (key, value) in self.params.items()}
 
-    def _validate(self):
+    def validate(self):
 
         # Check that all mandatory fields are present.
         for field_name in self.REQUIRED_FIELDS:
@@ -232,16 +234,24 @@ class BaseResponse:
                     "The %s field is missing" % field_name
                 )
 
+        # Check that no unexpected field is present.
+        expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
+        for field_name in self.params.keys():
+            if field_name not in expected_fields:
+                raise UnexpectedFieldException(
+                    "The %s field is unexpected" % field_name
+                )
+
         # Check that the transaction has not been tampered with.
         received_hash = self.params.pop(Constants.MERCHANT_SIG)
-        expected_hash = self._hash()
+        expected_hash = self.hash()
         if expected_hash != received_hash:
             raise InvalidTransactionException(
                 "The transaction is invalid. "
                 "This may indicate a fraud attempt."
             )
 
-    def _hash(self):
+    def hash(self):
         return self.client._compute_hash(self.HASH_KEYS, self.params)
 
     def process(self):
@@ -253,9 +263,20 @@ class BaseResponse:
 class PaymentResponse(BaseResponse):
     REQUIRED_FIELDS = (
         Constants.AUTH_RESULT,
+        Constants.MERCHANT_REFERENCE,
+        Constants.MERCHANT_SIG,
+        Constants.PAYMENT_METHOD,
+        Constants.PSP_REFERENCE,
+        Constants.SHOPPER_LOCALE,
+        Constants.SKIN_CODE,
+    )
+    OPTIONAL_FIELDS = (
+        Constants.MERCHANT_RETURN_DATA,
+    )
+    HASH_KEYS = (
+        Constants.AUTH_RESULT,
         Constants.PSP_REFERENCE,
         Constants.MERCHANT_REFERENCE,
         Constants.SKIN_CODE,
         Constants.MERCHANT_RETURN_DATA,
     )
-    HASH_KEYS = REQUIRED_FIELDS

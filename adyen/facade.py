@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 from django.conf import settings
 
 from oscar.core.loading import get_class
@@ -40,13 +42,22 @@ class Facade():
             raise
 
         # then, extract received data
-        success, incoming = response.process()
+        success, details = response.process()
 
-        order_number = incoming.get(Constants.ORDERID, '')
-        reference = incoming.get(Constants.TRANSACTIONID, '')
-        method = incoming.get(Constants.OPERATIONTYPE, '')
-        amount = int(incoming.get(Constants.AMOUNT))
-        status = Constants.STATUS_ACCEPTED if success else Constants.STATUS_DECLINED
+        order_number = details.get(Constants.MERCHANT_REFERENCE, '')
+        reference = details.get(Constants.PSP_REFERENCE, '')
+        method = details.get(Constants.PAYMENT_METHOD, '')
+
+        # Adyen does not provide the payment amount in the
+        # return URL, so we store it in this field to
+        # avoid a database query to get it back then.
+        amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
+
+        if success:
+            status = Constants.PAYMENT_RESULT_AUTHORISED
+        else:
+            status = Constants.PAYMENT_RESULT_REFUSED
+
         ip_address = request.META['REMOTE_ADDR']
 
         # record audit trail
@@ -59,12 +70,17 @@ class Facade():
             ip_address=ip_address,
         )
         if not success:
-            raise UnableToTakePayment(incoming.get(Constants.MESSAGE))
+
+            # TODO(MR): Provide customer feedback in case of refused payment.
+
+            raise UnableToTakePayment(details.get(Constants.MESSAGE))
 
         # normalize output data
         output_data = {
             'method': 'adyen',
             'amount': amount,
+            'status': status,
+            'details': details,
             'reference': reference,
             'ip_address': ip_address,
         }

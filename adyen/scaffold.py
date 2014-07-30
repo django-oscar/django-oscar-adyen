@@ -58,6 +58,11 @@ class Scaffold():
             Constants.SKIN_CODE: settings.ADYEN_SKIN_CODE,
             Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
             Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
+
+            # Adyen does not provide the payment amount in the
+            # return URL, so we store it in this field to
+            # avoid a database query to get it back then.
+            Constants.MERCHANT_RETURN_DATA: self.amount,
         })
 
     def handle_payment_feedback(self, request):
