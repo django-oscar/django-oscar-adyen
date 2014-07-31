@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import logging
 
+
 from urllib.parse import parse_qs
 
 logger = logging.getLogger('adyen')
@@ -225,8 +226,6 @@ class BaseResponse:
         self.secret_key = client.secret_key
         self.params = parse_qs(query_string, keep_blank_values=True)
         self.params = {key: value[0] for (key, value) in self.params.items()}
-
-        print(self.params)
 
     def validate(self):
 

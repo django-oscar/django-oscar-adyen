@@ -5,7 +5,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
 
 from .facade import Facade
-from .gateway import Constants
+from .gateway import Constants, MissingFieldException
 
 
 class Scaffold():
@@ -41,29 +41,32 @@ class Scaffold():
         """
 
         now = timezone.now()
-        session_validity = now + timezone.timedelta(days=1)
+        session_validity = now + timezone.timedelta(minutes=20)
         session_validity_format = '%Y-%m-%dT%H:%M:%SZ'
         ship_before_date = now + timezone.timedelta(days=30)
         ship_before_date_format = '%Y-%m-%d'
 
         # Build common field specs
-        field_specs = {
-            Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
-            Constants.MERCHANT_REFERENCE: self.order_id,
-            Constants.SHOPPER_REFERENCE: self.client_id,
-            Constants.SHOPPER_EMAIL: self.client_email,
-            Constants.CURRENCY_CODE: self.currency_code,
-            Constants.PAYMENT_AMOUNT: self.amount,
-            Constants.SKIN_CODE: settings.ADYEN_SKIN_CODE,
-            Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
-            Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
+        try:
+            field_specs = {
+                Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
+                Constants.MERCHANT_REFERENCE: self.order_id,
+                Constants.SHOPPER_REFERENCE: self.client_id,
+                Constants.SHOPPER_EMAIL: self.client_email,
+                Constants.CURRENCY_CODE: self.currency_code,
+                Constants.PAYMENT_AMOUNT: self.amount,
+                Constants.SKIN_CODE: settings.ADYEN_SKIN_CODE,
+                Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
+                Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
 
-            # Adyen does not provide the payment amount in the
-            # return URL, so we store it in this field to
-            # avoid a database query to get it back then.
-            Constants.MERCHANT_RETURN_DATA: self.amount,
+                # Adyen does not provide the payment amount in the
+                # return URL, so we store it in this field to
+                # avoid a database query to get it back then.
+                Constants.MERCHANT_RETURN_DATA: self.amount,
 
-        }
+            }
+        except AttributeError:
+            raise MissingFieldException
 
         # Check for overriden return URL.
         return_url = getattr(self, 'return_url', None)
