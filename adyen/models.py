@@ -18,7 +18,7 @@ class AdyenTransaction(models.Model):
     status = models.CharField(max_length=255, blank=True)
 
     amount = models.DecimalField(decimal_places=2, max_digits=12, blank=True, null=True)
-    currency = models.CharField(max_length=3, default='EUR')
+    currency = models.CharField(max_length=3, default=settings.OSCAR_DEFAULT_CURRENCY)
 
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     date_created = models.DateTimeField(default=timezone.now)

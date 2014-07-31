@@ -25,12 +25,21 @@ class Facade():
         ),
     }
 
-    def __init__(self):
-        self.gateway = Gateway({
-            'identifier': settings.ADYEN_IDENTIFIER,
-            'secret_key': settings.ADYEN_SECRET_KEY,
-            'action_url': settings.ADYEN_ACTION_URL,
-        })
+    def __init__(self, **kwargs):
+        init_params = {
+            Constants.IDENTIFIER: settings.ADYEN_IDENTIFIER,
+            Constants.SECRET_KEY: settings.ADYEN_SECRET_KEY,
+            Constants.ACTION_URL: settings.ADYEN_ACTION_URL,
+        }
+
+        # Check for overriden return URL.
+        if 'return_url' in kwargs:
+            init_params.update({
+                Constants.MERCHANT_RETURN_URL: kwargs.get('return_url')
+            })
+
+        # Initialize the gateway.
+        self.gateway = Gateway(init_params)
 
     def build_payment_form_fields(self, params):
         """ Return a dict containing the name and value

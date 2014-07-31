@@ -20,6 +20,7 @@ class Constants:
 
     MERCHANT_ACCOUNT = 'merchantAccount'
     MERCHANT_REFERENCE = 'merchantReference'
+    MERCHANT_RETURN_URL = 'resURL'
     MERCHANT_RETURN_DATA = 'merchantReturnData'
     MERCHANT_SIG = 'merchantSig'
 
@@ -37,6 +38,14 @@ class Constants:
     SHIP_BEFORE_DATE = 'shipBeforeDate'
     SESSION_VALIDITY = 'sessionValidity'
 
+    PAYMENT_METHOD = 'paymentMethod'
+    ALLOWED_METHODS = 'allowedMethods'
+    BLOCKED_METHODS = 'blockedMethods'
+    RECURRING_CONTRACT = 'recurringContract'
+    BILLING_ADDRESS_TYPE = 'billingAddressType'
+    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
+    OFFSET = 'offset'
+
     PSP_REFERENCE = 'pspReference'
     AUTH_RESULT = 'authResult'
 
@@ -45,14 +54,6 @@ class Constants:
     PAYMENT_RESULT_CANCELLED = 'CANCELLED'
     PAYMENT_RESULT_PENDING = 'PENDING'
     PAYMENT_RESULT_ERROR = 'ERROR'
-
-    PAYMENT_METHOD = 'paymentMethod'
-    ALLOWED_METHODS = 'allowedMethods'
-    BLOCKED_METHODS = 'blockedMethods'
-    RECURRING_CONTRACT = 'recurringContract'
-    BILLING_ADDRESS_TYPE = 'billingAddressType'
-    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
-    OFFSET = 'offset'
 
 
 # ---[ EXCEPTIONS ]---
@@ -172,8 +173,6 @@ class PaymentFormRequest(FormRequest):
         Constants.MERCHANT_REFERENCE,
         Constants.SHOPPER_REFERENCE,
         Constants.SHOPPER_EMAIL,
-        Constants.SHOPPER_LOCALE,
-        Constants.COUNTRY_CODE,
         Constants.CURRENCY_CODE,
         Constants.PAYMENT_AMOUNT,
         Constants.SESSION_VALIDITY,
@@ -186,6 +185,9 @@ class PaymentFormRequest(FormRequest):
         Constants.ALLOWED_METHODS,
         Constants.BLOCKED_METHODS,
         Constants.SHOPPER_STATEMENT,
+        Constants.SHOPPER_LOCALE,
+        Constants.COUNTRY_CODE,
+        Constants.MERCHANT_RETURN_URL,
         Constants.MERCHANT_RETURN_DATA,
         Constants.BILLING_ADDRESS_TYPE,
         Constants.DELIVERY_ADDRESS_TYPE,

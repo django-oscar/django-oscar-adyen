@@ -51,8 +51,6 @@ class Scaffold():
             Constants.MERCHANT_REFERENCE: self.order_id,
             Constants.SHOPPER_REFERENCE: self.client_id,
             Constants.SHOPPER_EMAIL: self.client_email,
-            Constants.SHOPPER_LOCALE: self.locale,
-            Constants.COUNTRY_CODE: self.country_code,
             Constants.CURRENCY_CODE: self.currency_code,
             Constants.PAYMENT_AMOUNT: self.amount,
             Constants.SKIN_CODE: settings.ADYEN_SKIN_CODE,
@@ -63,6 +61,7 @@ class Scaffold():
             # return URL, so we store it in this field to
             # avoid a database query to get it back then.
             Constants.MERCHANT_RETURN_DATA: self.amount,
+
         })
 
     def handle_payment_feedback(self, request):
