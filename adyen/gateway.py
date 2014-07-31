@@ -225,6 +225,8 @@ class BaseResponse:
         self.params = parse_qs(query_string, keep_blank_values=True)
         self.params = {key: value[0] for (key, value) in self.params.items()}
 
+        print(self.params)
+
     def validate(self):
 
         # Check that all mandatory fields are present.

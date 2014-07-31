@@ -3,6 +3,7 @@
 import json
 
 from django.conf import settings
+from django.utils.translation import ugettext_lazy as _
 
 from oscar.core.loading import get_class
 PaymentError = get_class('payment.exceptions', 'PaymentError')
@@ -13,6 +14,16 @@ from .models import AdyenTransaction
 
 
 class Facade():
+
+    FEEDBACK_MESSAGES = {
+        Constants.PAYMENT_RESULT_AUTHORISED: _("Your payment was successful."),
+        Constants.PAYMENT_RESULT_REFUSED: _("Your payment was refused."),
+        Constants.PAYMENT_RESULT_CANCELLED: _("Your payment was cancelled."),
+        Constants.PAYMENT_RESULT_PENDING: _("Your payment is still pending."),
+        Constants.PAYMENT_RESULT_ERROR: _(
+            "There was a problem with your payment. We apologize for the inconvenience"
+        ),
+    }
 
     def __init__(self):
         self.gateway = Gateway({
@@ -70,10 +81,9 @@ class Facade():
             ip_address=ip_address,
         )
         if not success:
-
-            # TODO(MR): Provide customer feedback in case of refused payment.
-
-            raise UnableToTakePayment(details.get(Constants.MESSAGE))
+            feedback_code = details.get(Constants.AUTH_RESULT, Constants.PAYMENT_RESULT_ERROR)
+            feedback_message = self.FEEDBACK_MESSAGES.get(feedback_code, )
+            raise UnableToTakePayment(feedback_message)
 
         # normalize output data
         output_data = {
