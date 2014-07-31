@@ -46,7 +46,8 @@ class Scaffold():
         ship_before_date = now + timezone.timedelta(days=30)
         ship_before_date_format = '%Y-%m-%d'
 
-        return self.facade.build_payment_form_fields({
+        # Build common field specs
+        field_specs = {
             Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
             Constants.MERCHANT_REFERENCE: self.order_id,
             Constants.SHOPPER_REFERENCE: self.client_id,
@@ -62,7 +63,17 @@ class Scaffold():
             # avoid a database query to get it back then.
             Constants.MERCHANT_RETURN_DATA: self.amount,
 
-        })
+        }
+
+        # Check for overriden return URL.
+        return_url = getattr(self, 'return_url', None)
+        if return_url is not None:
+            return_url = return_url.replace('PAYMENT_PROVIDER_CODE', 'adyen')
+            field_specs.update({
+                Constants.MERCHANT_RETURN_URL: return_url,
+            })
+
+        return self.facade.build_payment_form_fields(field_specs)
 
     def handle_payment_feedback(self, request):
         """

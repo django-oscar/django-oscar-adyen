@@ -92,7 +92,6 @@ class Gateway:
         self.action_url = settings.get(Constants.ACTION_URL, None)
 
         if self.identifier is None or self.secret_key is None or self.action_url is None:
-
             raise MissingParameterException(
                 "You need to specify the following parameters to initialize "
                 "the Adyen gateway: identifier, secret_key, action_url. "

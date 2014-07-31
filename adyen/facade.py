@@ -31,13 +31,6 @@ class Facade():
             Constants.SECRET_KEY: settings.ADYEN_SECRET_KEY,
             Constants.ACTION_URL: settings.ADYEN_ACTION_URL,
         }
-
-        # Check for overriden return URL.
-        if 'return_url' in kwargs:
-            init_params.update({
-                Constants.MERCHANT_RETURN_URL: kwargs.get('return_url')
-            })
-
         # Initialize the gateway.
         self.gateway = Gateway(init_params)
 
