@@ -1,1 +1,2 @@
-requests>=2.0.0
+bleach==1.4
+requests>=2.0.0,<3.0

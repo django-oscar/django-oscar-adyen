@@ -48,11 +48,12 @@ class Facade():
         # first, let's validate the Adyen response
         client = self.gateway
         query_string = request.META['QUERY_STRING']
-        try:
-            response = PaymentResponse(client, query_string)
-            response.validate()
-        except Exception as ex:
-            raise
+        response = PaymentResponse(client, query_string)
+
+        # Note that this may raise an exception if the response is invalid.
+        # For example: MissingFieldException, UnexpectedFieldException, ...
+        # The code "above" should be prepared to deal with it accordingly.
+        response.validate()
 
         # then, extract received data
         success, details = response.process()
@@ -71,6 +72,15 @@ class Facade():
         else:
             status = Constants.PAYMENT_RESULT_REFUSED
 
+        # FIXME: This is a naive way of getting the origin IP address
+        # Behind a proxy, this would actually contain the proxy's IP
+        # which we definitely don't care about.
+        # The canonical implementation in that case seems to be to use
+        # a HTTP_X_FORWARDED_FOR header (see:
+        # http://www.micahcarrick.com/django-ip-address-behind-nginx-proxy.html)
+        # but I'm not quite sure yet it is THE way.
+        # This is worth discussing, but not worth blocking the merge.
+
         ip_address = request.META['REMOTE_ADDR']
 
         # record audit trail
@@ -84,7 +94,7 @@ class Facade():
         )
         if not success:
             feedback_code = details.get(Constants.AUTH_RESULT, Constants.PAYMENT_RESULT_ERROR)
-            feedback_message = self.FEEDBACK_MESSAGES.get(feedback_code, )
+            feedback_message = self.FEEDBACK_MESSAGES.get(feedback_code)
             raise UnableToTakePayment(feedback_message)
 
         # normalize output data

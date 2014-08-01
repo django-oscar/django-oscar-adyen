@@ -5,7 +5,6 @@ import hashlib
 import hmac
 import logging
 
-
 from urllib.parse import parse_qs
 
 logger = logging.getLogger('adyen')
@@ -14,6 +13,8 @@ logger = logging.getLogger('adyen')
 # ---[ CONSTANTS ]---
 
 class Constants:
+
+    ADYEN = 'adyen'
 
     IDENTIFIER = 'identifier'
     SECRET_KEY = 'secret_key'
@@ -86,11 +87,13 @@ class Gateway:
     )
 
     def __init__(self, settings={}):
-        """ Initialize an Adyen gateway. """
+        """
+        Initialize an Adyen gateway.
+        """
 
-        self.identifier = settings.get(Constants.IDENTIFIER, None)
-        self.secret_key = settings.get(Constants.SECRET_KEY, None)
-        self.action_url = settings.get(Constants.ACTION_URL, None)
+        self.identifier = settings.get(Constants.IDENTIFIER)
+        self.secret_key = settings.get(Constants.SECRET_KEY)
+        self.action_url = settings.get(Constants.ACTION_URL)
 
         if self.identifier is None or self.secret_key is None or self.action_url is None:
             raise MissingParameterException(
@@ -100,35 +103,99 @@ class Gateway:
             )
 
     def _compute_hash(self, keys, params):
-        signature = ''
-        for key in keys:
-            value = str(params.get(key, ''))
-            signature += value
+        """
+        Compute a validation hash for Adyen transactions.
+
+        General method:
+
+        The signature is computed using the HMAC algorithm with the SHA-1
+        hashing function. The data passed, in the form fields, is concatenated
+        into a string, referred to as the “signing string”. The HMAC signature
+        is then computed over using a key that is specified in the Adyen Skin
+        settings. The signature is passed along with the form data and once
+        Adyen receives it, they use the key to verify that the data has not
+        been tampered with in transit. The signing string should be packed
+        into a binary format containing hex characters, and then base64-encoded
+        for transmission.
+
+        Payment Setup:
+
+        When setting up a payment the signing string is as follows:
+
+        paymentAmount + currencyCode + shipBeforeDate + merchantReference
+        + skinCode + merchantAccount + sessionValidity + shopperEmail
+        + shopperReference + recurringContract + allowedMethods
+        + blockedMethods + shopperStatement + merchantReturnData
+        + billingAddressType + deliveryAddressType + shopperType + offset
+
+        The order of the fields must be exactly as described above.
+        If you are not using one of the fields, such as allowedMethods,
+        the value for this field in the signing string is an empty string.
+
+        Payment Result:
+
+        The payment result uses the following signature string:
+
+        authResult + pspReference + merchantReference + skinCode
+        + merchantReturnData
+        """
+        signature = ''.join(str(params.get(key, '')) for key in keys)
         hm = hmac.new(self.secret_key.encode(), signature.encode(), hashlib.sha1)
         hash_ = base64.encodebytes(hm.digest()).strip().decode('utf-8')
         return hash_
 
     def _build_form_fields(self, adyen_request):
-        """ Return the hidden fields of an HTML form
-        allowing to perform this request. """
+        """
+        Return the hidden fields of an HTML form
+        allowing to perform this request.
+        """
         return adyen_request.build_form_fields()
 
     def build_payment_form_fields(self, params):
         return self._build_form_fields(PaymentFormRequest(self, params))
 
     def _process_response(self, adyen_response, query_string):
-        """ Process an Adyen response. """
+        """
+        Process an Adyen response.
+        """
         return adyen_response.process()
 
     def process_payment_response(self, query_string):
         return self._process_response(PaymentResponse(self, query_string))
 
 
+class BaseInteraction:
+
+    def check_fields(self):
+        """
+        Validate required and optional fields for both
+        requests and responses.
+        """
+
+        params = self.params
+
+        # Check that all mandatory fields are present.
+        for field_name in self.REQUIRED_FIELDS:
+            if field_name not in params or not params.get(field_name):
+                raise MissingFieldException(
+                    "The %s field is missing" % field_name
+                )
+
+        # Check that no unexpected field is present.
+        expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
+        for field_name in params.keys():
+            if field_name not in expected_fields:
+                raise UnexpectedFieldException(
+                    "The %s field is unexpected" % field_name
+                )
+
+
 # ---[ REQUESTS ]---
 
-class BaseRequest:
+class BaseRequest(BaseInteraction):
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
+    HASH_KEYS = ()
 
     def __init__(self, client, params={}):
         self.client = client
@@ -139,21 +206,7 @@ class BaseRequest:
         self.params.update({Constants.MERCHANT_SIG: self.hash()})
 
     def validate(self):
-
-        # Check that all mandatory fields are present.
-        for field_name in self.REQUIRED_FIELDS:
-            if field_name not in self.params:
-                raise MissingFieldException(
-                    "The %s field is missing" % field_name
-                )
-
-        # Check that no unexpected field has been passed.
-        expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
-        for field_name in self.params.keys():
-            if field_name not in expected_fields:
-                raise UnexpectedFieldException(
-                    "The %s field is unexpected" % field_name
-                )
+        self.check_fields()
 
     def hash(self):
         return self.client._compute_hash(self.HASH_KEYS, self.params)
@@ -194,6 +247,8 @@ class PaymentFormRequest(FormRequest):
         Constants.SHOPPER_TYPE,
         Constants.OFFSET,
     )
+
+    # Note that the order of the keys matter to compute the hash!
     HASH_KEYS = (
         Constants.PAYMENT_AMOUNT,
         Constants.CURRENCY_CODE,
@@ -218,8 +273,10 @@ class PaymentFormRequest(FormRequest):
 
 # ---[ RESPONSES ]---
 
-class BaseResponse:
+class BaseResponse(BaseInteraction):
     REQUIRED_FIELDS = ()
+    OPTIONAL_FIELDS = ()
+    HASH_KEYS = ()
 
     def __init__(self, client, query_string):
         self.client = client
@@ -229,20 +286,7 @@ class BaseResponse:
 
     def validate(self):
 
-        # Check that all mandatory fields are present.
-        for field_name in self.REQUIRED_FIELDS:
-            if field_name not in self.params:
-                raise MissingFieldException(
-                    "The %s field is missing" % field_name
-                )
-
-        # Check that no unexpected field is present.
-        expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
-        for field_name in self.params.keys():
-            if field_name not in expected_fields:
-                raise UnexpectedFieldException(
-                    "The %s field is unexpected" % field_name
-                )
+        self.check_fields()
 
         # Check that the transaction has not been tampered with.
         received_hash = self.params.pop(Constants.MERCHANT_SIG)
@@ -275,6 +319,8 @@ class PaymentResponse(BaseResponse):
     OPTIONAL_FIELDS = (
         Constants.MERCHANT_RETURN_DATA,
     )
+
+    # Note that the order of the keys matter to compute the hash!
     HASH_KEYS = (
         Constants.AUTH_RESULT,
         Constants.PSP_REFERENCE,

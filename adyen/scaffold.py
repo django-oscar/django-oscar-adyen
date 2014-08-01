@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import bleach
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
@@ -31,7 +33,7 @@ class Scaffold():
         fields_list = self.get_form_fields_list()
         return ''.join([
             '<input type="%s" name="%s" value="%s">\n' % (
-                f.get('type'), f.get('name'), f.get('value')
+                f.get('type'), f.get('name'), bleach.clean(f.get('value'))
             ) for f in fields_list
         ])
 
@@ -71,10 +73,8 @@ class Scaffold():
         # Check for overriden return URL.
         return_url = getattr(self, 'return_url', None)
         if return_url is not None:
-            return_url = return_url.replace('PAYMENT_PROVIDER_CODE', 'adyen')
-            field_specs.update({
-                Constants.MERCHANT_RETURN_URL: return_url,
-            })
+            return_url = return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
+            field_specs[Constants.MERCHANT_RETURN_URL] = return_url
 
         return self.facade.build_payment_form_fields(field_specs)
 

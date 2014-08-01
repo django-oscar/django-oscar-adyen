@@ -2,6 +2,8 @@
 
 from unittest.mock import Mock
 
+from freezegun import freeze_time
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
@@ -9,8 +11,6 @@ from django.test.utils import override_settings
 
 from oscar.core.loading import get_class
 UnableToTakePayment = get_class('payment.exceptions', 'UnableToTakePayment')
-
-from freezegun import freeze_time
 
 from .gateway import MissingFieldException, InvalidTransactionException
 from .models import AdyenTransaction
@@ -64,6 +64,8 @@ TAMPERED_QUERY_STRING = ('merchantReference=40100020135&skinCode=cqQJKZpg'
 )
 class AdyenTestCase(TestCase):
     def setUp(self):
+        super().setUp()
+
         self.order_data = {
             'order_id': 'ORD-123',
             'client_id': 123,
@@ -78,6 +80,8 @@ class AdyenTestCase(TestCase):
 
 class TestAdyenPaymentRequest(AdyenTestCase):
 
+
+    @override_settings(ADYEN_ACTION_URL=TEST_ACTION_URL)
     def test_form_action(self):
         """
         Test that the form action is properly fetched from the settings.

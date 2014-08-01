@@ -11,7 +11,7 @@ class AdyenTransaction(models.Model):
 
     # Note we don't use a foreign key as the order hasn't been created
     # by the time the transaction takes place
-    order_number = models.CharField(max_length=255, db_index=True)
+    order_number = models.CharField(max_length=255, db_index=True, unique=True)
 
     reference = models.CharField(max_length=255)
     method = models.CharField(max_length=255, blank=True)
@@ -27,6 +27,8 @@ class AdyenTransaction(models.Model):
         ordering = ('-date_created',)
 
     def __str__(self):
+
+        # "txn" is a widely used abbreviation for "transaction"
         return u'%s txn for order %s - ref: %s, status: %s' % (
             self.method.upper(),
             self.order_number,

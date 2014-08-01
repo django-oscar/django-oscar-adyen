@@ -16,7 +16,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'django-oscar>=0.4',
-        'requests>=2.0',
+        'requests>=2.0,<3.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -25,6 +25,8 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
         'Topic :: Office/Business :: Financial :: Point-Of-Sale',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]

@@ -20,6 +20,10 @@ class Migration(SchemaMigration):
             ('ip_address', self.gf('django.db.models.fields.GenericIPAddressField')(null=True, max_length=39, blank=True)),
             ('date_created', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime.now)),
         ))
+
+        # Adding unique constraint on 'AdyenTransaction', fields ['order_number']
+        db.create_unique('adyen_adyentransaction', ['order_number'])
+
         db.send_create_signal('adyen', ['AdyenTransaction'])
 
 
