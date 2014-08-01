@@ -1,2 +1,0 @@
-django-oscar-adyen
-==================
