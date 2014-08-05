@@ -134,7 +134,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         super().setUp()
         request = Mock()
         request.META = {
-            'REMOTE_ADDR': '127.0.0.1',
+            'X_HTTP_FORWARDED_FOR': '127.0.0.1',
         }
         self.request = request
 
@@ -158,6 +158,24 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_authorised_transactions, 1)
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
+
+    def test_handle_authorised_but_unproxied_payment(self):
+        """
+        A slight variation on the previous test.
+        We just want to ensure that the backend falls back properly
+        on using the Remote-Addr HTTP header if the X-Forwarded-For
+        one is not present in the request (non-proxied environment).
+        """
+
+        # We alter the request accordingly
+        self.request.META = {
+            'QUERY_STRING': AUTHORISED_PAYMENT_QUERY_STRING,
+            'REMOTE_ADDR': '127.0.0.1',
+        }
+
+        # The IP address has been found properly.
+        __, info = self.scaffold.handle_payment_feedback(self.request)
+        self.assertEqual(info.get('ip_address'), '127.0.0.1')
 
     def test_handle_refused_payment(self):
 

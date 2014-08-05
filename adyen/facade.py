@@ -72,16 +72,22 @@ class Facade():
         else:
             status = Constants.PAYMENT_RESULT_REFUSED
 
-        # FIXME: This is a naive way of getting the origin IP address
-        # Behind a proxy, this would actually contain the proxy's IP
-        # which we definitely don't care about.
-        # The canonical implementation in that case seems to be to use
-        # a HTTP_X_FORWARDED_FOR header (see:
-        # http://www.micahcarrick.com/django-ip-address-behind-nginx-proxy.html)
-        # but I'm not quite sure yet it is THE way.
-        # This is worth discussing, but not worth blocking the merge.
+        try:
 
-        ip_address = request.META['REMOTE_ADDR']
+            # We are behind a reverse proxy, so the "real" IP
+            # address has been forwarded in the X-Forwarded-For
+            # HTTP header -- See:
+            # http://www.micahcarrick.com/django-ip-address-behind-nginx-proxy.html
+
+            ip_address = request.META['X_HTTP_FORWARDED_FOR']
+
+        except KeyError:
+
+            # Fallback on the classic Remote-Addr HTTP
+            # header for non-proxied environments, eg.
+            # those using [dev|grunt]server.
+
+            ip_address = request.META['REMOTE_ADDR']
 
         # record audit trail
         AdyenTransaction.objects.create(
