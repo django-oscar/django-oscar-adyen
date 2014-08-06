@@ -27,7 +27,6 @@ setup(
     install_requires=[
         'bleach==1.4',
         'django-oscar>=0.7',
-        'freezegun==0.1.18',
         'iptools==0.6.1',
         'requests>=2.0,<3.0',
     ],
