@@ -15,11 +15,13 @@ UnableToTakePayment = get_class('payment.exceptions', 'UnableToTakePayment')
 from .gateway import MissingFieldException, InvalidTransactionException
 from .models import AdyenTransaction
 from .scaffold import Scaffold
+from .facade import Facade
 
 TEST_IDENTIFIER = 'OscaroFR'
 TEST_SECRET_KEY = 'oscaroscaroscaro'
 TEST_ACTION_URL = 'https://test.adyen.com/hpp/select.shtml'
 TEST_SKIN_CODE = 'cqQJKZpg'
+TEST_IP_ADDRESS_HTTP_HEADER = 'HTTP_X_FORWARDED_FOR'
 
 TEST_RETURN_URL = 'https://www.test.com/checkout/return/adyen/'
 
@@ -80,7 +82,6 @@ class AdyenTestCase(TestCase):
 
 class TestAdyenPaymentRequest(AdyenTestCase):
 
-
     @override_settings(ADYEN_ACTION_URL=TEST_ACTION_URL)
     def test_form_action(self):
         """
@@ -133,18 +134,68 @@ class TestAdyenPaymentResponse(AdyenTestCase):
     def setUp(self):
         super().setUp()
         request = Mock()
+
+        # Most tests use unproxied requests, the case of proxied ones
+        # is unit-tested by the `test_get_origin_ip_address` method.
         request.META = {
-            'X_HTTP_FORWARDED_FOR': '127.0.0.1',
+            'REMOTE_ADDR': '127.0.0.1',
         }
+
         self.request = request
 
+    def test_get_origin_ip_address(self):
+        """
+        Make sure that the `_get_origin_ip_address()` method works with all
+        the possible meaningful combinations of default and custom HTTP header
+        names.
+        """
+
+        # With no specified ADYEN_IP_ADDRESS_HTTP_HEADER setting,
+        # ensure we fetch the origin IP address in the REMOTE_ADDR
+        # HTTP header.
+        ip_address = Facade._get_origin_ip_address(self.request)
+        self.assertEqual(ip_address, '127.0.0.1')
+
+        # Check the return value is the empty string
+        # if we have nothing in the `REMOTE_ADDR` header.
+        self.request.META.update({'REMOTE_ADDR': ''})
+        ip_address = Facade._get_origin_ip_address(self.request)
+        self.assertEqual(ip_address, '')
+
+        # Check the return value is None if we have
+        # no `REMOTE_ADDR` header at all.
+        del self.request.META['REMOTE_ADDR']
+        ip_address = Facade._get_origin_ip_address(self.request)
+        self.assertIsNone(ip_address)
+
+        with self.settings(ADYEN_IP_ADDRESS_HTTP_HEADER=TEST_IP_ADDRESS_HTTP_HEADER):
+
+            # Now we add the `HTTP_X_FORWARDED_FOR` header and
+            # ensure it is used instead.
+            self.request.META.update({
+                'REMOTE_ADDR': '127.0.0.1',
+                'HTTP_X_FORWARDED_FOR': '93.16.93.168'
+            })
+            ip_address = Facade._get_origin_ip_address(self.request)
+            self.assertEqual(ip_address, '93.16.93.168')
+
+            # Even if the default header is missing.
+            del self.request.META['REMOTE_ADDR']
+            ip_address = Facade._get_origin_ip_address(self.request)
+            self.assertEqual(ip_address, '93.16.93.168')
+
+            # And finally back to `None` if we have neither header.
+            del self.request.META['HTTP_X_FORWARDED_FOR']
+            ip_address = Facade._get_origin_ip_address(self.request)
+            self.assertIsNone(ip_address)
+
     def test_handle_authorised_payment(self):
+        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
 
         # Before the test, there are no recorded transactions in the database
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
         authorised, info = self.scaffold.handle_payment_feedback(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -159,23 +210,39 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
 
-    def test_handle_authorised_but_unproxied_payment(self):
+    def test_handle_authorized_payment_if_no_ip_address_was_found(self):
         """
         A slight variation on the previous test.
-        We just want to ensure that the backend falls back properly
-        on using the Remote-Addr HTTP header if the X-Forwarded-For
-        one is not present in the request (non-proxied environment).
+        We just want to ensure that the backend does not crash if we haven't
+        been able to find a reliable origin IP address.
         """
+        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
 
-        # We alter the request accordingly
-        self.request.META = {
-            'QUERY_STRING': AUTHORISED_PAYMENT_QUERY_STRING,
-            'REMOTE_ADDR': '127.0.0.1',
-        }
+        # Before the test, there are no recorded transactions in the database
+        num_recorded_transactions = AdyenTransaction.objects.all().count()
+        self.assertEqual(num_recorded_transactions, 0)
 
-        # The IP address has been found properly.
-        __, info = self.scaffold.handle_payment_feedback(self.request)
-        self.assertEqual(info.get('ip_address'), '127.0.0.1')
+        # We alter the request so no IP address will be found...
+        del self.request.META['REMOTE_ADDR']
+
+        # ... double-check that the IP address is, therefore, `None` ...
+        ip_address = Facade._get_origin_ip_address(self.request)
+        self.assertIsNone(ip_address)
+
+        # ... and finally make sure everything works as expected.
+        authorised, info = self.scaffold.handle_payment_feedback(self.request)
+        self.assertTrue(authorised)
+        self.assertEqual(info.get('amount'), 67864)
+        self.assertEqual(info.get('method'), 'adyen')
+        self.assertIsNone(info.get('ip_address'))
+        self.assertEqual(info.get('status'), 'AUTHORISED')
+        self.assertEqual(info.get('reference'), '8614068242050184')
+
+        # After the test there's one authorised transaction and no refused transaction in the DB
+        num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
+        self.assertEqual(num_authorised_transactions, 1)
+        num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
+        self.assertEqual(num_refused_transactions, 0)
 
     def test_handle_refused_payment(self):
 

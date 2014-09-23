@@ -21,7 +21,8 @@ class Facade():
         Constants.PAYMENT_RESULT_CANCELLED: _("Your payment was cancelled."),
         Constants.PAYMENT_RESULT_PENDING: _("Your payment is still pending."),
         Constants.PAYMENT_RESULT_ERROR: _(
-            "There was a problem with your payment. We apologize for the inconvenience"
+            "There was a problem with your payment. "
+            "We apologize for the inconvenience."
         ),
     }
 
@@ -35,12 +36,35 @@ class Facade():
         self.gateway = Gateway(init_params)
 
     def build_payment_form_fields(self, params):
-        """ Return a dict containing the name and value
-            of all the hidden fields necessary to build
-            the form that will be POSTed to the payment
-            provider.
+        """
+        Return a dict containing the name and value of all the hidden fields
+        necessary to build the form that will be POSTed to Adyen.
         """
         return self.gateway.build_payment_form_fields(params)
+
+    @classmethod
+    def _get_origin_ip_address(cls, request):
+        """
+        Return the IP address where the payment originated from.
+
+        We need to fetch the *real* origin IP address. According to
+        the platform architecture, it may be transmitted to our application
+        via vastly variable HTTP headers. The name of the relevant header is
+        therefore configurable via the `ADYEN_IP_ADDRESS_HTTP_HEADER` Django
+        setting. We fallback on the canonical `REMOTE_ADDR`, used for regular,
+        unproxied requests.
+        """
+        try:
+            ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
+        except AttributeError:
+            ip_address_http_header = 'REMOTE_ADDR'
+
+        try:
+            ip_address = request.META[ip_address_http_header]
+        except KeyError:
+            ip_address = None
+
+        return ip_address
 
     def handle_payment_feedback(self, request):
         success, output_data = False, {}
@@ -72,24 +96,9 @@ class Facade():
         else:
             status = Constants.PAYMENT_RESULT_REFUSED
 
-        try:
+        ip_address = self._get_origin_ip_address(request)
 
-            # We are behind a reverse proxy, so the "real" IP
-            # address has been forwarded in the X-Forwarded-For
-            # HTTP header -- See:
-            # http://www.micahcarrick.com/django-ip-address-behind-nginx-proxy.html
-
-            ip_address = request.META['X_HTTP_FORWARDED_FOR']
-
-        except KeyError:
-
-            # Fallback on the classic Remote-Addr HTTP
-            # header for non-proxied environments, eg.
-            # those using [dev|grunt]server.
-
-            ip_address = request.META['REMOTE_ADDR']
-
-        # record audit trail
+        # ... and record the audit trail.
         AdyenTransaction.objects.create(
             order_number=order_number,
             reference=reference,
@@ -103,7 +112,7 @@ class Facade():
             feedback_message = self.FEEDBACK_MESSAGES.get(feedback_code)
             raise UnableToTakePayment(feedback_message)
 
-        # normalize output data
+        # We now normalize the output data to feed it back to the Oscar shop.
         output_data = {
             'method': 'adyen',
             'amount': amount,
