@@ -303,7 +303,7 @@ class BaseResponse(BaseInteraction):
     def process(self):
         payment_result = self.params.get(Constants.AUTH_RESULT, None)
         accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
-        return accepted, self.params
+        return accepted, payment_result, self.params
 
 
 class PaymentResponse(BaseResponse):
@@ -311,13 +311,13 @@ class PaymentResponse(BaseResponse):
         Constants.AUTH_RESULT,
         Constants.MERCHANT_REFERENCE,
         Constants.MERCHANT_SIG,
-        Constants.PAYMENT_METHOD,
-        Constants.PSP_REFERENCE,
         Constants.SHOPPER_LOCALE,
         Constants.SKIN_CODE,
     )
     OPTIONAL_FIELDS = (
         Constants.MERCHANT_RETURN_DATA,
+        Constants.PAYMENT_METHOD,
+        Constants.PSP_REFERENCE,
     )
 
     # Note that the order of the keys matter to compute the hash!

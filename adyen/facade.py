@@ -5,9 +5,7 @@ import json
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-from oscar.core.loading import get_class
-PaymentError = get_class('payment.exceptions', 'PaymentError')
-UnableToTakePayment = get_class('payment.exceptions', 'UnableToTakePayment')
+from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
 from .gateway import Gateway, Constants, PaymentResponse
 from .models import AdyenTransaction
@@ -80,7 +78,7 @@ class Facade():
         response.validate()
 
         # then, extract received data
-        success, details = response.process()
+        success, status, details = response.process()
 
         order_number = details.get(Constants.MERCHANT_REFERENCE, '')
         reference = details.get(Constants.PSP_REFERENCE, '')
@@ -90,11 +88,6 @@ class Facade():
         # return URL, so we store it in this field to
         # avoid a database query to get it back then.
         amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
-
-        if success:
-            status = Constants.PAYMENT_RESULT_AUTHORISED
-        else:
-            status = Constants.PAYMENT_RESULT_REFUSED
 
         ip_address = self._get_origin_ip_address(request)
 
@@ -108,8 +101,22 @@ class Facade():
             ip_address=ip_address,
         )
         if not success:
-            feedback_code = details.get(Constants.AUTH_RESULT, Constants.PAYMENT_RESULT_ERROR)
-            feedback_message = self.FEEDBACK_MESSAGES.get(feedback_code)
+            feedback_message = self.FEEDBACK_MESSAGES.get(status)
+
+            # If the customer cancelled their payment, we must raise
+            # a specific Exception to allow a different code path in the
+            # application above. This specific Exception, however, is not
+            # yet available in the official version of Oscar. If we can't
+            # find it, we fall back to the default behaviour, which is to
+            # lump cancellations with the other failure reasons.
+            if status == Constants.PAYMENT_RESULT_CANCELLED:
+                try:
+                    from oscar.apps.payment.exceptions import PaymentCancelled
+                    raise PaymentCancelled(feedback_message)
+                except ImportError:
+                    pass
+
+            # Otherwise...
             raise UnableToTakePayment(feedback_message)
 
         # We now normalize the output data to feed it back to the Oscar shop.

@@ -9,8 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from oscar.core.loading import get_class
-UnableToTakePayment = get_class('payment.exceptions', 'UnableToTakePayment')
+from oscar.apps.payment.exceptions import UnableToTakePayment
 
 from .gateway import MissingFieldException, InvalidTransactionException
 from .models import AdyenTransaction
@@ -46,6 +45,11 @@ AUTHORISED_PAYMENT_QUERY_STRING = ('merchantReference=40100020137&skinCode=cqQJK
                                    '&shopperLocale=en_GB&paymentMethod=visa&authResult=AUTHORISED'
                                    '&pspReference=8614068242050184&merchantReturnData=67864'
                                    '&merchantSig=k5Ji9eQ5kSoLdEHfydfDognnsoo=')
+
+CANCELLED_PAYMENT_QUERY_STRING = ('merchantReference=00000045&skinCode=cqQJKZpg'
+                                  '&shopperLocale=en_GB&authResult=CANCELLED'
+                                  '&merchantReturnData=25956'
+                                  '&merchantSig=Z5s7N0AwQ5BuK4p05tAzdzrE3K4=')
 
 REFUSED_PAYMENT_QUERY_STRING = ('merchantReference=40100020139&skinCode=cqQJKZpg'
                                 '&shopperLocale=en_GB&paymentMethod=visa&authResult=REFUSED'
@@ -243,6 +247,28 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_authorised_transactions, 1)
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
+
+    def test_handle_cancelled_payment(self):
+
+        # Before the test, there are no recorded transactions in the database
+        num_recorded_transactions = AdyenTransaction.objects.all().count()
+        self.assertEqual(num_recorded_transactions, 0)
+
+        self.request.META['QUERY_STRING'] = CANCELLED_PAYMENT_QUERY_STRING
+
+        try:
+            from oscar.apps.payment.exceptions import PaymentCancelled
+        except ImportError:
+            from oscar.apps.payment.exceptions import UnableToTakePayment as PaymentCancelled
+
+        with self.assertRaises(PaymentCancelled):
+            self.scaffold.handle_payment_feedback(self.request)
+
+        # After the test there's one cancelled transaction and no authorised transaction in the DB
+        num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
+        self.assertEqual(num_authorised_transactions, 0)
+        num_cancelled_transactions = AdyenTransaction.objects.filter(status='CANCELLED').count()
+        self.assertEqual(num_cancelled_transactions, 1)
 
     def test_handle_refused_payment(self):
 
