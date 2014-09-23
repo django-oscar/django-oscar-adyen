@@ -21,7 +21,8 @@ class Facade():
         Constants.PAYMENT_RESULT_CANCELLED: _("Your payment was cancelled."),
         Constants.PAYMENT_RESULT_PENDING: _("Your payment is still pending."),
         Constants.PAYMENT_RESULT_ERROR: _(
-            "There was a problem with your payment. We apologize for the inconvenience"
+            "There was a problem with your payment. "
+            "We apologize for the inconvenience."
         ),
     }
 
@@ -35,22 +36,23 @@ class Facade():
         self.gateway = Gateway(init_params)
 
     def build_payment_form_fields(self, params):
-        """ Return a dict containing the name and value
-            of all the hidden fields necessary to build
-            the form that will be POSTed to the payment
-            provider.
+        """
+        Return a dict containing the name and value of all the hidden fields
+        necessary to build the form that will be POSTed to Adyen.
         """
         return self.gateway.build_payment_form_fields(params)
 
     @classmethod
     def _get_origin_ip_address(cls, request):
         """
-        We need to fetch the real origin IP address. According to
+        Return the IP address where the payment originated from.
+
+        We need to fetch the *real* origin IP address. According to
         the platform architecture, it may be transmitted to our application
         via vastly variable HTTP headers. The name of the relevant header is
-        therefore configurable via the ADYEN_IP_ADDRESS_HTTP_HEADER Django
-        setting. We fallback on the basic `REMOTE_ADDR`one which is the
-        standard, unproxied, HTTP one.
+        therefore configurable via the `ADYEN_IP_ADDRESS_HTTP_HEADER` Django
+        setting. We fallback on the canonical `REMOTE_ADDR`, used for regular,
+        unproxied requests.
         """
         try:
             ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
