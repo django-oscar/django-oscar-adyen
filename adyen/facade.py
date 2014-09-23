@@ -42,7 +42,8 @@ class Facade():
         """
         return self.gateway.build_payment_form_fields(params)
 
-    def _get_origin_ip_address(self, request):
+    @classmethod
+    def _get_origin_ip_address(cls, request):
         """
         We need to fetch the real origin IP address. According to
         the platform architecture, it may be transmitted to our application
