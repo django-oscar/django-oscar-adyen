@@ -144,6 +144,11 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.request = request
 
     def test_get_origin_ip_address(self):
+        """
+        Make sure that the `_get_origin_ip_address()` method works with all
+        the possible meaningful combinations of default and custom HTTP header
+        names.
+        """
 
         # With no specified ADYEN_IP_ADDRESS_HTTP_HEADER setting,
         # ensure we fetch the origin IP address in the REMOTE_ADDR
