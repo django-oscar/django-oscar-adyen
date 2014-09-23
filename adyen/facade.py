@@ -5,10 +5,7 @@ import json
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-from oscar.core.exceptions import ClassNotFoundError
-from oscar.core.loading import get_class
-PaymentError = get_class('payment.exceptions', 'PaymentError')
-UnableToTakePayment = get_class('payment.exceptions', 'UnableToTakePayment')
+from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
 from .gateway import Gateway, Constants, PaymentResponse
 from .models import AdyenTransaction
@@ -114,9 +111,9 @@ class Facade():
             # lump cancellations with the other failure reasons.
             if status == Constants.PAYMENT_RESULT_CANCELLED:
                 try:
-                    PaymentCancelled = get_class('payment.exceptions', 'PaymentCancelled')
+                    from oscar.apps.payment.exceptions import PaymentCancelled
                     raise PaymentCancelled(feedback_message)
-                except ClassNotFoundError:
+                except ImportError:
                     pass
 
             # Otherwise...

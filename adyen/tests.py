@@ -9,9 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from oscar.core.exceptions import ClassNotFoundError
-from oscar.core.loading import get_class
-UnableToTakePayment = get_class('payment.exceptions', 'UnableToTakePayment')
+from oscar.apps.payment.exceptions import UnableToTakePayment
 
 from .gateway import MissingFieldException, InvalidTransactionException
 from .models import AdyenTransaction
@@ -259,11 +257,11 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.request.META['QUERY_STRING'] = CANCELLED_PAYMENT_QUERY_STRING
 
         try:
-            cancellation_exception_class = get_class('payment.exceptions', 'PaymentCancelled')
-        except ClassNotFoundError:
-            cancellation_exception_class = UnableToTakePayment
+            from oscar.apps.payment.exceptions import PaymentCancelled
+        except ImportError:
+            from oscar.apps.payment.exceptions import UnableToTakePayment as PaymentCancelled
 
-        with self.assertRaises(cancellation_exception_class):
+        with self.assertRaises(PaymentCancelled):
             self.scaffold.handle_payment_feedback(self.request)
 
         # After the test there's one cancelled transaction and no authorised transaction in the DB
