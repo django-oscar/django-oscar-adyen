@@ -42,6 +42,27 @@ class Facade():
         """
         return self.gateway.build_payment_form_fields(params)
 
+    def _get_origin_ip_address(self, request):
+        """
+        We need to fetch the real origin IP address. According to
+        the platform architecture, it may be transmitted to our application
+        via vastly variable HTTP headers. The name of the relevant header is
+        therefore configurable via the ADYEN_IP_ADDRESS_HTTP_HEADER Django
+        setting. We fallback on the basic `REMOTE_ADDR`one which is the
+        standard, unproxied, HTTP one.
+        """
+        try:
+            ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
+        except AttributeError:
+            ip_address_http_header = 'REMOTE_ADDR'
+
+        try:
+            ip_address = request.META[ip_address_http_header]
+        except KeyError:
+            ip_address = None
+
+        return ip_address
+
     def handle_payment_feedback(self, request):
         success, output_data = False, {}
 
@@ -72,22 +93,7 @@ class Facade():
         else:
             status = Constants.PAYMENT_RESULT_REFUSED
 
-        # We need to fetch the real origin IP address. According to
-        # the platform architecture, it may be transmitted to our application
-        # via vastly variable HTTP headers. The name of the relevant header is
-        # therefore configurable via the ADYEN_IP_ADDRESS_HTTP_HEADER Django
-        # setting. We fallback on the basic `REMOTE_ADDR`one which is the
-        # standard, unproxied, HTTP one.
-        try:
-            ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
-        except AttributeError:
-            ip_address_http_header = 'REMOTE_ADDR'
-
-        # We can now fetch the IP address...
-        try:
-            ip_address = request.META[ip_address_http_header]
-        except KeyError:
-            ip_address = None
+        ip_address = self._get_origin_ip_address(request)
 
         # ... and record the audit trail.
         AdyenTransaction.objects.create(
