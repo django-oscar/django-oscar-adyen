@@ -190,12 +190,12 @@ class TestAdyenPaymentResponse(AdyenTestCase):
             self.assertIsNone(ip_address)
 
     def test_handle_authorised_payment(self):
+        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
 
         # Before the test, there are no recorded transactions in the database
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
         authorised, info = self.scaffold.handle_payment_feedback(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -210,23 +210,39 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
 
-    def test_handle_payment_if_no_ip_address_was_found(self):
+    def test_handle_authorized_payment_if_no_ip_address_was_found(self):
         """
         A slight variation on the previous test.
         We just want to ensure that the backend does not crash if we haven't
         been able to find a reliable origin IP address.
         """
-
-        # We alter the request accordingly...
         self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
+
+        # Before the test, there are no recorded transactions in the database
+        num_recorded_transactions = AdyenTransaction.objects.all().count()
+        self.assertEqual(num_recorded_transactions, 0)
+
+        # We alter the request so no IP address will be found...
         del self.request.META['REMOTE_ADDR']
 
         # ... double-check that the IP address is, therefore, `None` ...
         ip_address = Facade._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
-        # ... and finally make sure there is no subsequent crash.
-        self.scaffold.handle_payment_feedback(self.request)
+        # ... and finally make sure everything works as expected.
+        authorised, info = self.scaffold.handle_payment_feedback(self.request)
+        self.assertTrue(authorised)
+        self.assertEqual(info.get('amount'), 67864)
+        self.assertEqual(info.get('method'), 'adyen')
+        self.assertIsNone(info.get('ip_address'))
+        self.assertEqual(info.get('status'), 'AUTHORISED')
+        self.assertEqual(info.get('reference'), '8614068242050184')
+
+        # After the test there's one authorised transaction and no refused transaction in the DB
+        num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
+        self.assertEqual(num_authorised_transactions, 1)
+        num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
+        self.assertEqual(num_refused_transactions, 0)
 
     def test_handle_refused_payment(self):
 
