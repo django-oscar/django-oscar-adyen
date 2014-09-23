@@ -43,5 +43,9 @@ class AdyenTransaction(models.Model):
         return self.status == Constants.PAYMENT_RESULT_AUTHORISED
 
     @property
+    def cancelled(self):
+        return self.status == Constants.PAYMENT_RESULT_CANCELLED
+
+    @property
     def declined(self):
         return self.status == Constants.PAYMENT_RESULT_REFUSED
