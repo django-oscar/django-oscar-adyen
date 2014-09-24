@@ -43,7 +43,8 @@ class Facade():
     @classmethod
     def _get_origin_ip_address(cls, request):
         """
-        Return the IP address where the payment originated from.
+        Return the IP address where the payment originated from or None if
+        we are unable to get it.
 
         We need to fetch the *real* origin IP address. According to
         the platform architecture, it may be transmitted to our application
@@ -62,7 +63,7 @@ class Facade():
         except KeyError:
             ip_address = None
 
-        return ip_address
+        return ip_address if ip_address else None
 
     def handle_payment_feedback(self, request):
         success, output_data = False, {}
@@ -89,7 +90,7 @@ class Facade():
         # avoid a database query to get it back then.
         amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
 
-        ip_address = self._get_origin_ip_address(request)
+        ip_address = self._get_origin_ip_address(request)  # None if not found
 
         # ... and record the audit trail.
         AdyenTransaction.objects.create(

@@ -160,14 +160,14 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         ip_address = Facade._get_origin_ip_address(self.request)
         self.assertEqual(ip_address, '127.0.0.1')
 
-        # Check the return value is the empty string
-        # if we have nothing in the `REMOTE_ADDR` header.
+        # Check the return value is None if we have nothing
+        # in the `REMOTE_ADDR` header.
         self.request.META.update({'REMOTE_ADDR': ''})
         ip_address = Facade._get_origin_ip_address(self.request)
-        self.assertEqual(ip_address, '')
+        self.assertIsNone(ip_address)
 
-        # Check the return value is None if we have
-        # no `REMOTE_ADDR` header at all.
+        # Check the return value is None if we have no `REMOTE_ADDR`
+        # header at all.
         del self.request.META['REMOTE_ADDR']
         ip_address = Facade._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
