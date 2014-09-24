@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import six
+
 from unittest.mock import Mock
 
 from freezegun import freeze_time
@@ -159,6 +161,8 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # HTTP header.
         ip_address = Facade._get_origin_ip_address(self.request)
         self.assertEqual(ip_address, '127.0.0.1')
+        if six.PY3:
+            self.assertEqual(type(ip_address), str)
 
         # Check the return value is None if we have nothing
         # in the `REMOTE_ADDR` header.
@@ -182,11 +186,15 @@ class TestAdyenPaymentResponse(AdyenTestCase):
             })
             ip_address = Facade._get_origin_ip_address(self.request)
             self.assertEqual(ip_address, '93.16.93.168')
+            if six.PY3:
+                self.assertEqual(type(ip_address), str)
 
             # Even if the default header is missing.
             del self.request.META['REMOTE_ADDR']
             ip_address = Facade._get_origin_ip_address(self.request)
             self.assertEqual(ip_address, '93.16.93.168')
+            if six.PY3:
+                self.assertEqual(type(ip_address), str)
 
             # And finally back to `None` if we have neither header.
             del self.request.META['HTTP_X_FORWARDED_FOR']

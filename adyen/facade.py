@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import json
+import logging
+import six
 
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
@@ -9,6 +11,8 @@ from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
 from .gateway import Gateway, Constants, PaymentResponse
 from .models import AdyenTransaction
+
+logger = logging.getLogger('adyen')
 
 
 class Facade():
@@ -61,7 +65,19 @@ class Facade():
         try:
             ip_address = request.META[ip_address_http_header]
         except KeyError:
-            ip_address = None
+            return None
+
+        # We should return an `str` object in Python 3, but it looks like
+        # we *may* be getting a `bytes` in certain circumstances. However,
+        # as the plan is to open source this backend, we should make sure
+        # it also works in Python 2. **Eventually**.
+        if six.PY3:
+            try:
+                ip_address = ip_address.decode('utf-8')  # bytes --> str
+            except AttributeError:
+                pass
+
+        # TODO: elif six.PY2...
 
         return ip_address if ip_address else None
 
@@ -93,14 +109,20 @@ class Facade():
         ip_address = self._get_origin_ip_address(request)  # None if not found
 
         # ... and record the audit trail.
-        AdyenTransaction.objects.create(
-            order_number=order_number,
-            reference=reference,
-            method=method,
-            amount=amount,
-            status=status,
-            ip_address=ip_address,
-        )
+        try:
+            AdyenTransaction.objects.create(
+                order_number=order_number,
+                reference=reference,
+                method=method,
+                amount=amount,
+                status=status,
+                ip_address=ip_address,
+            )
+        except Exception as ex:
+            logger.exception("Unable to record audit trail for transaction "
+                             "with reference %s" % reference)
+            pass
+
         if not success:
             feedback_message = self.FEEDBACK_MESSAGES.get(status)
 
