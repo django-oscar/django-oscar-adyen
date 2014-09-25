@@ -149,6 +149,34 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
         self.request = request
 
+    def test_is_valid_ip_address(self):
+
+        # The empty string is not a valid IP address
+        ip_address = ''
+        self.assertFalse(Facade._is_valid_ip_address(ip_address))
+
+        # A kinda random string is not a valid IP address
+        ip_address = 'TOTORO'
+        self.assertFalse(Facade._is_valid_ip_address(ip_address))
+
+        # These are valid IP addresses
+        ip_address = '127.0.0.1'
+        self.assertTrue(Facade._is_valid_ip_address(ip_address))
+        ip_address = '192.168.12.34'
+        self.assertTrue(Facade._is_valid_ip_address(ip_address))
+
+        # This one is out of the valid ranges
+        ip_address = '192.168.12.345'
+        self.assertFalse(Facade._is_valid_ip_address(ip_address))
+
+        # This one is a valid IPv6 address
+        ip_address = '2001:0db8:85a3:0000:0000:8a2e:0370:7334'
+        self.assertTrue(Facade._is_valid_ip_address(ip_address))
+
+        # This one is an invalid IPv6 address
+        ip_address = '2001::0234:C1ab::A0:aabc:003F'
+        self.assertFalse(Facade._is_valid_ip_address(ip_address))
+
     def test_get_origin_ip_address(self):
         """
         Make sure that the `_get_origin_ip_address()` method works with all

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import iptools
 import json
 import logging
 import six
@@ -45,6 +46,15 @@ class Facade():
         return self.gateway.build_payment_form_fields(params)
 
     @classmethod
+    def _is_valid_ip_address(cls, s):
+        """
+        Make sure that a string is a valid representation of an IP address.
+        Relies on the iptools package, even though Python 3.4 gave us the new
+        shiny `ipaddress` module in the stdlib.
+        """
+        return iptools.ipv4.validate_ip(s) or iptools.ipv6.validate_ip(s)
+
+    @classmethod
     def _get_origin_ip_address(cls, request):
         """
         Return the IP address where the payment originated from or None if
@@ -67,19 +77,11 @@ class Facade():
         except KeyError:
             return None
 
-        # We should return an `str` object in Python 3, but it looks like
-        # we *may* be getting a `bytes` in certain circumstances. However,
-        # as the plan is to open source this backend, we should make sure
-        # it also works in Python 2. **Eventually**.
-        if six.PY3:
-            try:
-                ip_address = ip_address.decode('utf-8')  # bytes --> str
-            except AttributeError:
-                pass
+        if not cls._is_valid_ip_address(ip_address):
+            logger.warn("%s is not a valid IP address" % ip_address)
+            return None
 
-        # TODO: elif six.PY2...
-
-        return ip_address if ip_address else None
+        return ip_address
 
     def handle_payment_feedback(self, request):
         success, output_data = False, {}
@@ -106,22 +108,32 @@ class Facade():
         # avoid a database query to get it back then.
         amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
 
-        ip_address = self._get_origin_ip_address(request)  # None if not found
-
-        # ... and record the audit trail.
+        # We record the audit trail.
         try:
-            AdyenTransaction.objects.create(
+            txn_log = AdyenTransaction.objects.create(
                 order_number=order_number,
                 reference=reference,
                 method=method,
                 amount=amount,
                 status=status,
-                ip_address=ip_address,
             )
         except Exception as ex:
             logger.exception("Unable to record audit trail for transaction "
                              "with reference %s" % reference)
-            pass
+
+        # We try to record the IP address where the payment originated from.
+        ip_address = self._get_origin_ip_address(request)  # None if not found
+        if ip_address is not None:
+            try:
+                txn_log.ip_address = ip_address
+                txn_log.save()
+            except NameError:
+
+                # This means txn_log is not defined, which means the audit
+                # trail hasn't been successfully recorded above -- in which
+                # case, we have already informed our users.
+
+                pass
 
         if not success:
             feedback_message = self.FEEDBACK_MESSAGES.get(status)

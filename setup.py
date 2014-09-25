@@ -14,7 +14,7 @@ if os.environ.get('USER', '') == 'vagrant':
 setup(
 
     name='django-oscar-adyen',
-    version='0.1.8',
+    version='0.1.9',
     url='https://github.com/oscaro/django-oscar-adyen',
     author='Mathieu Richardoz',
     author_email='mr@babik.fr',
@@ -28,6 +28,7 @@ setup(
         'bleach==1.4',
         'django-oscar>=0.7,<0.9',
         'freezegun==0.1.18',
+        'iptools==0.6.1',
         'requests>=2.0,<3.0',
     ],
     classifiers=[
