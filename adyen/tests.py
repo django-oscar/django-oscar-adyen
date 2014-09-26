@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import six
-
+from copy import deepcopy
 from unittest.mock import Mock
-
-from freezegun import freeze_time
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -13,10 +10,14 @@ from django.test.utils import override_settings
 
 from oscar.apps.payment.exceptions import UnableToTakePayment
 
+from freezegun import freeze_time
+import six
+
 from .gateway import MissingFieldException, InvalidTransactionException
 from .models import AdyenTransaction
 from .scaffold import Scaffold
 from .facade import Facade
+
 
 TEST_IDENTIFIER = 'OscaroFR'
 TEST_SECRET_KEY = 'oscaroscaroscaro'
@@ -43,25 +44,47 @@ EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'shopperReference', 'value': 123},
 ]
 
-AUTHORISED_PAYMENT_QUERY_STRING = ('merchantReference=40100020137&skinCode=cqQJKZpg'
-                                   '&shopperLocale=en_GB&paymentMethod=visa&authResult=AUTHORISED'
-                                   '&pspReference=8614068242050184&merchantReturnData=67864'
-                                   '&merchantSig=k5Ji9eQ5kSoLdEHfydfDognnsoo=')
+AUTHORISED_PAYMENT_PARAMS = {
+    'merchantReference': '40100020137',
+    'skinCode': 'cqQJKZpg',
+    'shopperLocale': 'en_GB',
+    'paymentMethod': 'visa',
+    'authResult': 'AUTHORISED',
+    'pspReference': '8614068242050184',
+    'merchantReturnData': '67864',
+    'merchantSig': 'k5Ji9eQ5kSoLdEHfydfDognnsoo=',
+}
 
-CANCELLED_PAYMENT_QUERY_STRING = ('merchantReference=00000045&skinCode=cqQJKZpg'
-                                  '&shopperLocale=en_GB&authResult=CANCELLED'
-                                  '&merchantReturnData=25956'
-                                  '&merchantSig=Z5s7N0AwQ5BuK4p05tAzdzrE3K4=')
+CANCELLED_PAYMENT_PARAMS = {
+    'merchantReference': '00000045',
+    'skinCode': 'cqQJKZpg',
+    'shopperLocale': 'en_GB',
+    'authResult': 'CANCELLED',
+    'merchantReturnData': '25956',
+    'merchantSig': 'Z5s7N0AwQ5BuK4p05tAzdzrE3K4=',
+}
 
-REFUSED_PAYMENT_QUERY_STRING = ('merchantReference=40100020139&skinCode=cqQJKZpg'
-                                '&shopperLocale=en_GB&paymentMethod=visa&authResult=REFUSED'
-                                '&pspReference=8614068251598198&merchantReturnData=67864'
-                                '&merchantSig=3KI5SiHHkftRwzoM7gue4D0aIaY=')
+REFUSED_PAYMENT_PARAMS = {
+    'merchantReference': '40100020139',
+    'skinCode': 'cqQJKZpg',
+    'shopperLocale': 'en_GB',
+    'paymentMethod': 'visa',
+    'authResult': 'REFUSED',
+    'pspReference': '8614068251598198',
+    'merchantReturnData': '67864',
+    'merchantSig': '3KI5SiHHkftRwzoM7gue4D0aIaY=',
+}
 
-TAMPERED_QUERY_STRING = ('merchantReference=40100020135&skinCode=cqQJKZpg'
-                         '&shopperLocale=en_GB&paymentMethod=visa&authResult=AUTHORISED'
-                         '&pspReference=8614068228971221&merchantReturnData=67864'
-                         '&merchantSig=14M4N3V1LH4X0RZ')
+TAMPERED_PAYMENT_PARAMS = {
+    'merchantReference': '40100020135',
+    'skinCode': 'cqQJKZpg',
+    'shopperLocale': 'en_GB',
+    'paymentMethod': 'visa',
+    'authResult': 'AUTHORISED',
+    'pspReference': '8614068228971221',
+    'merchantReturnData': '67864',
+    'merchantSig': '14M4N3V1LH4X0RZ',
+}
 
 
 @override_settings(
@@ -230,7 +253,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
             self.assertIsNone(ip_address)
 
     def test_handle_authorised_payment(self):
-        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
+        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
 
         # Before the test, there are no recorded transactions in the database
         num_recorded_transactions = AdyenTransaction.objects.all().count()
@@ -256,7 +279,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         We just want to ensure that the backend does not crash if we haven't
         been able to find a reliable origin IP address.
         """
-        self.request.META['QUERY_STRING'] = AUTHORISED_PAYMENT_QUERY_STRING
+        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
 
         # Before the test, there are no recorded transactions in the database
         num_recorded_transactions = AdyenTransaction.objects.all().count()
@@ -290,7 +313,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.META['QUERY_STRING'] = CANCELLED_PAYMENT_QUERY_STRING
+        self.request.REQUEST = deepcopy(CANCELLED_PAYMENT_PARAMS)
 
         try:
             from oscar.apps.payment.exceptions import PaymentCancelled
@@ -312,7 +335,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.META['QUERY_STRING'] = REFUSED_PAYMENT_QUERY_STRING
+        self.request.REQUEST = deepcopy(REFUSED_PAYMENT_PARAMS)
         with self.assertRaises(UnableToTakePayment):
             self.scaffold.handle_payment_feedback(self.request)
 
@@ -328,7 +351,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.META['QUERY_STRING'] = TAMPERED_QUERY_STRING
+        self.request.REQUEST = deepcopy(TAMPERED_PAYMENT_PARAMS)
         with self.assertRaises(InvalidTransactionException):
             self.scaffold.handle_payment_feedback(self.request)
 

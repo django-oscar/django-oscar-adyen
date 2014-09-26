@@ -95,6 +95,3 @@ class Scaffold():
         - PaymentCancelled: payment was cancelled (duh)
         """
         return self.facade.check_payment_outcome(request)
-
-
-

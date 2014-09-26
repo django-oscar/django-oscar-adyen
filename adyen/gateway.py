@@ -90,7 +90,6 @@ class Gateway:
         """
         Initialize an Adyen gateway.
         """
-
         self.identifier = settings.get(Constants.IDENTIFIER)
         self.secret_key = settings.get(Constants.SECRET_KEY)
         self.action_url = settings.get(Constants.ACTION_URL)
@@ -146,22 +145,21 @@ class Gateway:
 
     def _build_form_fields(self, adyen_request):
         """
-        Return the hidden fields of an HTML form
-        allowing to perform this request.
+        Return the hidden fields of an HTML form allowing to perform this request.
         """
         return adyen_request.build_form_fields()
 
     def build_payment_form_fields(self, params):
         return self._build_form_fields(PaymentFormRequest(self, params))
 
-    def _process_response(self, adyen_response, query_string):
+    def _process_response(self, adyen_response, params):
         """
         Process an Adyen response.
         """
         return adyen_response.process()
 
-    def process_payment_response(self, query_string):
-        return self._process_response(PaymentResponse(self, query_string))
+    def process_payment_response(self, params):
+        return self._process_response(PaymentResponse(self, params))
 
 
 class BaseInteraction:
@@ -171,7 +169,6 @@ class BaseInteraction:
         Validate required and optional fields for both
         requests and responses.
         """
-
         params = self.params
 
         # Check that all mandatory fields are present.
@@ -278,11 +275,10 @@ class BaseResponse(BaseInteraction):
     OPTIONAL_FIELDS = ()
     HASH_KEYS = ()
 
-    def __init__(self, client, query_string):
+    def __init__(self, client, params):
         self.client = client
         self.secret_key = client.secret_key
-        self.params = parse_qs(query_string, keep_blank_values=True)
-        self.params = {key: value[0] for (key, value) in self.params.items()}
+        self.params = params
 
     def validate(self):
 

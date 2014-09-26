@@ -88,8 +88,7 @@ class Facade():
 
         # first, let's validate the Adyen response
         client = self.gateway
-        query_string = request.META['QUERY_STRING']
-        response = PaymentResponse(client, query_string)
+        response = PaymentResponse(client, request.REQUEST)
 
         # Note that this may raise an exception if the response is invalid.
         # For example: MissingFieldException, UnexpectedFieldException, ...
