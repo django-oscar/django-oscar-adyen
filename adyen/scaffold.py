@@ -80,6 +80,21 @@ class Scaffold():
 
     def handle_payment_feedback(self, request):
         """
-        Handle the post-payment process.
+        Handle the post-payment process:
+        - No Exception: payment was accepted
+        - UnableToTakePayment: payment was refused
+        - PaymentCancelled: payment was cancelled (duh)
         """
         return self.facade.handle_payment_feedback(request)
+
+    def check_payment_outcome(self, request):
+        """
+        Check the payment outcome:
+        - No Exception: payment was accepted
+        - UnableToTakePayment: payment was refused
+        - PaymentCancelled: payment was cancelled (duh)
+        """
+        return self.facade.check_payment_outcome(request)
+
+
+

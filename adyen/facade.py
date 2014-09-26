@@ -164,3 +164,6 @@ class Facade():
             'ip_address': ip_address,
         }
         return success, output_data
+
+    def check_payment_outcome(self, request):
+        pass
