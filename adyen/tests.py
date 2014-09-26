@@ -174,29 +174,29 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
     def test_is_valid_ip_address(self):
 
-        # The empty string is not a valid IP address
+        # The empty string is not a valid IP address.
         ip_address = ''
         self.assertFalse(Facade._is_valid_ip_address(ip_address))
 
-        # A kinda random string is not a valid IP address
+        # A kinda random string is not a valid IP address.
         ip_address = 'TOTORO'
         self.assertFalse(Facade._is_valid_ip_address(ip_address))
 
-        # These are valid IP addresses
+        # These are valid IP addresses.
         ip_address = '127.0.0.1'
         self.assertTrue(Facade._is_valid_ip_address(ip_address))
         ip_address = '192.168.12.34'
         self.assertTrue(Facade._is_valid_ip_address(ip_address))
 
-        # This one is out of the valid ranges
+        # This one is out of the valid ranges.
         ip_address = '192.168.12.345'
         self.assertFalse(Facade._is_valid_ip_address(ip_address))
 
-        # This one is a valid IPv6 address
+        # This one is a valid IPv6 address.
         ip_address = '2001:0db8:85a3:0000:0000:8a2e:0370:7334'
         self.assertTrue(Facade._is_valid_ip_address(ip_address))
 
-        # This one is an invalid IPv6 address
+        # This one is an invalid IPv6 address.
         ip_address = '2001::0234:C1ab::A0:aabc:003F'
         self.assertFalse(Facade._is_valid_ip_address(ip_address))
 
@@ -253,12 +253,26 @@ class TestAdyenPaymentResponse(AdyenTestCase):
             self.assertIsNone(ip_address)
 
     def test_handle_authorised_payment(self):
-        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
 
-        # Before the test, there are no recorded transactions in the database
+        # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
+        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        authorised, info = self.scaffold.check_payment_outcome(self.request)
+        self.assertTrue(authorised)
+        self.assertEqual(info.get('amount'), 67864)
+        self.assertEqual(info.get('method'), 'adyen')
+        self.assertEqual(info.get('ip_address'), '127.0.0.1')
+        self.assertEqual(info.get('status'), 'AUTHORISED')
+        self.assertEqual(info.get('reference'), '8614068242050184')
+
+        # After calling `check_payment_outcome`, there are still no recorded
+        # transactions in the database.
+        num_recorded_transactions = AdyenTransaction.objects.all().count()
+        self.assertEqual(num_recorded_transactions, 0)
+
+        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
         authorised, info = self.scaffold.handle_payment_feedback(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -267,7 +281,8 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(info.get('status'), 'AUTHORISED')
         self.assertEqual(info.get('reference'), '8614068242050184')
 
-        # After the test there's one authorised transaction and no refused transaction in the DB
+        # After calling `handle_payment_feedback` there is one authorised
+        # transaction and no refused transaction in the database.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
         self.assertEqual(num_authorised_transactions, 1)
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
@@ -281,7 +296,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         """
         self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
 
-        # Before the test, there are no recorded transactions in the database
+        # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
@@ -301,7 +316,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(info.get('status'), 'AUTHORISED')
         self.assertEqual(info.get('reference'), '8614068242050184')
 
-        # After the test there's one authorised transaction and no refused transaction in the DB
+        # After the test there's one authorised transaction and no refused transaction in the DB.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
         self.assertEqual(num_authorised_transactions, 1)
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
@@ -309,7 +324,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
     def test_handle_cancelled_payment(self):
 
-        # Before the test, there are no recorded transactions in the database
+        # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
@@ -323,7 +338,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         with self.assertRaises(PaymentCancelled):
             self.scaffold.handle_payment_feedback(self.request)
 
-        # After the test there's one cancelled transaction and no authorised transaction in the DB
+        # After the test there's one cancelled transaction and no authorised transaction in the DB.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
         self.assertEqual(num_authorised_transactions, 0)
         num_cancelled_transactions = AdyenTransaction.objects.filter(status='CANCELLED').count()
@@ -331,7 +346,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
     def test_handle_refused_payment(self):
 
-        # Before the test, there are no recorded transactions in the database
+        # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
@@ -339,7 +354,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         with self.assertRaises(UnableToTakePayment):
             self.scaffold.handle_payment_feedback(self.request)
 
-        # After the test there's one refused transaction and no authorised transaction in the DB
+        # After the test there's one refused transaction and no authorised transaction in the DB.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
         self.assertEqual(num_authorised_transactions, 0)
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
@@ -347,7 +362,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
     def test_handle_tampered_payment(self):
 
-        # Before the test, there are no recorded transactions in the database
+        # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
@@ -355,6 +370,6 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         with self.assertRaises(InvalidTransactionException):
             self.scaffold.handle_payment_feedback(self.request)
 
-        # After the test, there are still no recorded transactions in the database
+        # After the test, there are still no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
