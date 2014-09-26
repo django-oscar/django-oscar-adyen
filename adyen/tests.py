@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from copy import deepcopy
+import six
 from unittest.mock import Mock
 
 from django.conf import settings
@@ -11,7 +12,6 @@ from django.test.utils import override_settings
 from oscar.apps.payment.exceptions import UnableToTakePayment
 
 from freezegun import freeze_time
-import six
 
 from .gateway import MissingFieldException, InvalidTransactionException
 from .models import AdyenTransaction

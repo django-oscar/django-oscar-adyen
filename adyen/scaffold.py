@@ -85,7 +85,7 @@ class Scaffold():
         - UnableToTakePayment: payment was refused
         - PaymentCancelled: payment was cancelled (duh)
         """
-        return self.facade.handle_payment_feedback(request)
+        return self.facade.handle_payment_feedback(request, record_audit_trail=True)
 
     def check_payment_outcome(self, request):
         """
@@ -94,4 +94,4 @@ class Scaffold():
         - UnableToTakePayment: payment was refused
         - PaymentCancelled: payment was cancelled (duh)
         """
-        return self.facade.check_payment_outcome(request)
+        return self.facade.handle_payment_feedback(request, record_audit_trail=False)

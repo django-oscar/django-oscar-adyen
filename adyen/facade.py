@@ -83,29 +83,21 @@ class Facade():
 
         return ip_address
 
-    def handle_payment_feedback(self, request):
-        success, output_data = False, {}
-
-        # first, let's validate the Adyen response
-        client = self.gateway
-        response = PaymentResponse(client, request.REQUEST)
-
-        # Note that this may raise an exception if the response is invalid.
-        # For example: MissingFieldException, UnexpectedFieldException, ...
-        # The code "above" should be prepared to deal with it accordingly.
-        response.validate()
-
-        # then, extract received data
-        success, status, details = response.process()
-
+    def _extract_details(self, details):
+        """
+        Helper: extract data from the return value of `response.process`.
+        """
         order_number = details.get(Constants.MERCHANT_REFERENCE, '')
         reference = details.get(Constants.PSP_REFERENCE, '')
         method = details.get(Constants.PAYMENT_METHOD, '')
-
-        # Adyen does not provide the payment amount in the
-        # return URL, so we store it in this field to
-        # avoid a database query to get it back then.
         amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
+        return order_number, reference, method, amount
+
+    def _record_audit_trail(self, request, status, details):
+        """
+        Record an AdyenTransaction to keep track of the current payment attempt.
+        """
+        order_number, reference, method, amount = self._extract_details(details)
 
         # We record the audit trail.
         try:
@@ -134,7 +126,33 @@ class Facade():
 
                 pass
 
+    def handle_payment_feedback(self, request, record_audit_trail):
+        """
+        Validate, process, optionally record audit trail and provide feedback
+        about the current payment response.
+        """
+        success, output_data = False, {}
+
+        # We must first validate the Adyen response.
+        client = self.gateway
+        response = PaymentResponse(client, request.REQUEST)
+
+        # Note that this may raise an exception if the response is invalid.
+        # For example: MissingFieldException, UnexpectedFieldException, ...
+        # The code "above" should be prepared to deal with it accordingly.
+        response.validate()
+
+        # Then, we can extract the received data...
+        success, status, details = response.process()
+
+        # ... and record the audit trail if instructed to.
+        if record_audit_trail:
+            self._record_audit_trail(request, status, details)
+
+        # In case the payment was not successful, we must provide a relevant
+        # feedback to our (would be) customer.
         if not success:
+
             feedback_message = self.FEEDBACK_MESSAGES.get(status)
 
             # If the customer cancelled their payment, we must raise
@@ -153,16 +171,19 @@ class Facade():
             # Otherwise...
             raise UnableToTakePayment(feedback_message)
 
-        # We now normalize the output data to feed it back to the Oscar shop.
+        # We now fetch the data that we need to feed back to the Oscar shop...
+        __, reference, __, amount = self._extract_details(details)
+        ip_address = self._get_origin_ip_address(request)
+
+        # ... normalize it...
         output_data = {
-            'method': 'adyen',
+            'method': Constants.ADYEN,
             'amount': amount,
             'status': status,
             'details': details,
             'reference': reference,
             'ip_address': ip_address,
         }
-        return success, output_data
 
-    def check_payment_outcome(self, request):
-        pass
+        # ... and finally return it!
+        return success, output_data
