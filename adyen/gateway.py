@@ -285,7 +285,7 @@ class BaseResponse(BaseInteraction):
         self.check_fields()
 
         # Check that the transaction has not been tampered with.
-        received_hash = self.params.pop(Constants.MERCHANT_SIG)
+        received_hash = self.params.get(Constants.MERCHANT_SIG)
         expected_hash = self.hash()
         if expected_hash != received_hash:
             raise InvalidTransactionException(

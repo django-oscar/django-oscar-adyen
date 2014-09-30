@@ -84,6 +84,7 @@ class Scaffold():
         - No Exception: payment was accepted
         - UnableToTakePayment: payment was refused
         - PaymentCancelled: payment was cancelled (duh)
+        Record the audit trail of the transaction if everything is fine.
         """
         return self.facade.handle_payment_feedback(request, record_audit_trail=True)
 
