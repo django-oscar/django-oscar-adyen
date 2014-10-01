@@ -6,6 +6,7 @@ import logging
 import six
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.utils.translation import ugettext_lazy as _
 
 from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
@@ -188,3 +189,19 @@ class Facade():
 
         # ... and finally return it!
         return success, output_data
+
+    def build_notification_acknowledgement(self, request):
+        """
+        Return the appropriate response to send to the Adyen servers to
+        acknowledge a transaction notification.
+
+        Quoting the `Adyen Integration Manual` (page 26):
+
+        "The Adyen notification system requires a response within 30 seconds
+        of receipt of the notification, the server is expecting a response of
+        [accepted], including the brackets. When our systems receive this
+        response all notifications contained in the message are marked as
+        successfully sent."
+        """
+        return HttpResponse('[accepted]')
+

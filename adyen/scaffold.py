@@ -96,3 +96,6 @@ class Scaffold():
         - PaymentCancelled: payment was cancelled (duh)
         """
         return self.facade.handle_payment_feedback(request, record_audit_trail=False)
+
+    def build_notification_acknowledgement(self, request):
+        return self.facade.build_notification_acknowledgement(request)
