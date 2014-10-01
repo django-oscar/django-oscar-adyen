@@ -135,8 +135,7 @@ class Facade():
 
         # We must first validate the Adyen response.
         client = self.gateway
-        method = request.method
-        params = request.GET if method == 'GET' else request.POST
+        params = request.POST if request.method == 'POST' else request.GET
         response = PaymentResponse(client, params)
 
         # Note that this may raise an exception if the response is invalid.

@@ -163,6 +163,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
     def setUp(self):
         super().setUp()
         request = Mock()
+        request.method = 'GET'
 
         # Most tests use unproxied requests, the case of proxied ones
         # is unit-tested by the `test_get_origin_ip_address` method.
@@ -258,7 +259,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS)
         authorised, info = self.scaffold.check_payment_outcome(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -272,7 +273,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS)
         authorised, info = self.scaffold.handle_payment_feedback(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -288,13 +289,37 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
 
+        # We delete the previously recorded AdyenTransaction
+        AdyenTransaction.objects.filter(status='AUTHORISED').delete()
+
+        # We now test with POST instead of GET
+        self.request.method = 'POST'
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = None
+
+        authorised, info = self.scaffold.handle_payment_feedback(self.request)
+        self.assertTrue(authorised)
+        self.assertEqual(info.get('amount'), 67864)
+        self.assertEqual(info.get('method'), 'adyen')
+        self.assertEqual(info.get('ip_address'), '127.0.0.1')
+        self.assertEqual(info.get('status'), 'AUTHORISED')
+        self.assertEqual(info.get('reference'), '8614068242050184')
+
+        # After calling `handle_payment_feedback` there is one authorised
+        # transaction and no refused transaction in the database.
+        num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
+        self.assertEqual(num_authorised_transactions, 1)
+        num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
+        self.assertEqual(num_refused_transactions, 0)
+
+
     def test_handle_authorized_payment_if_no_ip_address_was_found(self):
         """
         A slight variation on the previous test.
         We just want to ensure that the backend does not crash if we haven't
         been able to find a reliable origin IP address.
         """
-        self.request.REQUEST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS)
 
         # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
@@ -328,7 +353,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.REQUEST = deepcopy(CANCELLED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(CANCELLED_PAYMENT_PARAMS)
 
         try:
             from oscar.apps.payment.exceptions import PaymentCancelled
@@ -350,7 +375,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.REQUEST = deepcopy(REFUSED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(REFUSED_PAYMENT_PARAMS)
         with self.assertRaises(UnableToTakePayment):
             self.scaffold.handle_payment_feedback(self.request)
 
@@ -366,7 +391,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.REQUEST = deepcopy(TAMPERED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(TAMPERED_PAYMENT_PARAMS)
         with self.assertRaises(InvalidTransactionException):
             self.scaffold.handle_payment_feedback(self.request)
 
