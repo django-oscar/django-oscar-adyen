@@ -15,6 +15,7 @@ logger = logging.getLogger('adyen')
 class Constants:
 
     ACCEPTED_NOTIFICATION = '[accepted]'
+
     ACTION_URL = 'action_url'
     ADYEN = 'adyen'
     ALLOWED_METHODS = 'allowedMethods'
@@ -54,7 +55,7 @@ class Constants:
     REASON = 'reason'
     RECURRING_CONTRACT = 'recurringContract'
     SECRET_KEY = 'secret_key'
-    SEPARATOR = '|'
+    SEPARATOR = ':'
     SESSION_VALIDITY = 'sessionValidity'
     SKIN_CODE = 'skinCode'
     SHIP_BEFORE_DATE = 'shipBeforeDate'

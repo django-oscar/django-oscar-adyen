@@ -86,13 +86,14 @@ class Facade():
 
         return ip_address
 
-    def _extract_details(self, details):
+    def _unpack_details(self, details):
         """
         Helper: extract data from the return value of `response.process`.
         """
-        order_number = details.get(Constants.MERCHANT_REFERENCE, '')
-        reference = details.get(Constants.PSP_REFERENCE, '')
-        method = details.get(Constants.PAYMENT_METHOD, '')
+        merchant_reference = details.get(Constants.MERCHANT_REFERENCE, '')
+        customer_id, basket_id, order_number = merchant_reference.split(Constants.SEPARATOR)
+        psp_reference = details.get(Constants.PSP_REFERENCE, '')
+        payment_method = details.get(Constants.PAYMENT_METHOD, '')
 
         # The payment amount is transmitted in a different parameter whether
         # we are in the context of a PaymentRedirection (`merchantReturnData`)
@@ -104,21 +105,28 @@ class Facade():
         # generic at a later date.
         amount = int(details.get(Constants.MERCHANT_RETURN_DATA, details.get(Constants.VALUE)))
 
-        return order_number, reference, method, amount
+        return {
+            'customer_id': customer_id,
+            'basket_id': basket_id,
+            'order_number': order_number,
+            'psp_reference': psp_reference,
+            'payment_method': payment_method,
+            'amount': amount,
+        }
 
     def _record_audit_trail(self, request, status, details):
         """
         Record an AdyenTransaction to keep track of the current payment attempt.
         """
-        order_number, reference, method, amount = self._extract_details(details)
+        txn_details = self._unpack_details(details)
 
         # We record the audit trail.
         try:
             txn_log = AdyenTransaction.objects.create(
-                order_number=order_number,
-                reference=reference,
-                method=method,
-                amount=amount,
+                order_number=txn_details['order_number'],
+                reference=txn_details['psp_reference'],
+                method=txn_details['payment_method'],
+                amount=txn_details['amount'],
                 status=status,
             )
         except Exception as ex:
@@ -204,18 +212,12 @@ class Facade():
             raise UnableToTakePayment(feedback_message)
 
         # We now fetch the data that we need to feed back to the Oscar shop...
-        __, reference, __, amount = self._extract_details(details)
-        ip_address = self._get_origin_ip_address(request)
-
-        # ... normalize it...
         output_data = {
             'method': Constants.ADYEN,
-            'amount': amount,
             'status': status,
-            'details': details,
-            'reference': reference,
-            'ip_address': ip_address,
+            'ip_address': self._get_origin_ip_address(request),
         }
+        output_data.update(self._extract_details(details))
 
         # ... and finally return it!
         return success, output_data

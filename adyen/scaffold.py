@@ -41,18 +41,23 @@ class Scaffold():
         """
         Return the payment form fields as a list of dicts.
         """
-
         now = timezone.now()
         session_validity = now + timezone.timedelta(minutes=20)
         session_validity_format = '%Y-%m-%dT%H:%M:%SZ'
         ship_before_date = now + timezone.timedelta(days=30)
         ship_before_date_format = '%Y-%m-%d'
 
+        # We need to keep track of all these identifiers to make sure the
+        # application can find everything when coming back from Adyen.
+        merchant_reference = Constants.SEPARATOR.join(
+            self.client_id, self.basket_id, self.order_id
+        )
+
         # Build common field specs
         try:
             field_specs = {
                 Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
-                Constants.MERCHANT_REFERENCE: self.order_id,
+                Constants.MERCHANT_REFERENCE: merchant_reference,
                 Constants.SHOPPER_REFERENCE: self.client_id,
                 Constants.SHOPPER_EMAIL: self.client_email,
                 Constants.CURRENCY_CODE: self.currency_code,
