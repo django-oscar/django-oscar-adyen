@@ -14,6 +14,7 @@ logger = logging.getLogger('adyen')
 
 class Constants:
 
+    ACCEPTED_NOTIFICATION = '[accepted]'
     ACTION_URL = 'action_url'
     ADYEN = 'adyen'
     ALLOWED_METHODS = 'allowedMethods'

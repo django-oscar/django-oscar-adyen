@@ -155,7 +155,7 @@ class Facade():
 
         # We must first find out whether this is a redirection or a notification.
         client = self.gateway
-        params = response_klass = None
+        params = response_class = None
 
         if request.method == 'GET':
             params = request.GET
@@ -233,5 +233,5 @@ class Facade():
         response all notifications contained in the message are marked as
         successfully sent."
         """
-        return HttpResponse('[accepted]')
+        return HttpResponse(Constants.ACCEPTED_NOTIFICATION)
 
