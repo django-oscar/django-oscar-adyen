@@ -215,11 +215,15 @@ class Facade():
         output_data = {
             'method': Constants.ADYEN,
             'status': status,
+            'details': details,
             'ip_address': self._get_origin_ip_address(request),
         }
+
+        # ... provide an "unpacked" version for easier access to the
+        # transaction details...
         output_data.update(self._extract_details(details))
 
-        # ... and finally return it!
+        # ... and finally return the whole thing.
         return success, output_data
 
     def build_notification_acknowledgement(self, request):
