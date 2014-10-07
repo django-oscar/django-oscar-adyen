@@ -211,7 +211,7 @@ class BaseRequest(BaseInteraction):
         self.validate()
 
         # Compute request hash.
-        self.params.update({Constants.MERCHANT_SIG: self.hash()})
+        self.params.update({self.HASH_FIELD: self.hash()})
 
     def validate(self):
         self.check_fields()
@@ -255,6 +255,7 @@ class PaymentFormRequest(FormRequest):
         Constants.SHOPPER_TYPE,
         Constants.OFFSET,
     )
+    HASH_FIELD = Constants.MERCHANT_SIG
 
     # Note that the order of the keys matter to compute the hash!
     HASH_KEYS = (
@@ -284,6 +285,7 @@ class PaymentFormRequest(FormRequest):
 class BaseResponse(BaseInteraction):
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
+    HASH_FIELD = None
     HASH_KEYS = ()
 
     def __init__(self, client, params):
@@ -292,28 +294,40 @@ class BaseResponse(BaseInteraction):
         self.params = params
 
     def validate(self):
-
         self.check_fields()
-
-        # Check that the transaction has not been tampered with.
-        received_hash = self.params.get(Constants.MERCHANT_SIG)
-        expected_hash = self.hash()
-        if expected_hash != received_hash:
-            raise InvalidTransactionException(
-                "The transaction is invalid. "
-                "This may indicate a fraud attempt."
-            )
 
     def hash(self):
         return self.client._compute_hash(self.HASH_KEYS, self.params)
 
     def process(self):
-        payment_result = self.params.get(Constants.AUTH_RESULT, None)
-        accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
-        return accepted, payment_result, self.params
+        return NotImplemented
 
 
-class PaymentResponse(BaseResponse):
+class PaymentNotification(BaseResponse):
+    REQUIRED_FIELDS = (
+        Constants.CURRENCY,
+        Constants.EVENT_CODE,
+        Constants.EVENT_DATE,
+        Constants.LIVE,
+        Constants.MERCHANT_ACCOUNT_CODE,
+        Constants.MERCHANT_REFERENCE,
+        Constants.OPERATIONS;
+        Constants.ORIGINAL_REFERENCE,
+        Constants.PAYMENT_METHOD,
+        Constants.PSP_REFERENCE,
+        Constants.REASON,
+        Constants.SUCCESS,
+        Constants.VALUE,  # The payment amount may be retrieved here.
+    )
+
+    def process(self):
+        payment_result = self.params.get(Constants.SUCCESS, None)
+        accepted = payment_result == Constants.TRUE
+        status = Constants.PAYMENT_RESULT_AUTHORISED if accepted else PAYMENT_RESULT_REFUSED
+        return accepted, status, self.params
+
+
+class PaymentRedirection(BaseResponse):
     REQUIRED_FIELDS = (
         Constants.AUTH_RESULT,
         Constants.MERCHANT_REFERENCE,
@@ -322,10 +336,11 @@ class PaymentResponse(BaseResponse):
         Constants.SKIN_CODE,
     )
     OPTIONAL_FIELDS = (
-        Constants.MERCHANT_RETURN_DATA,
+        Constants.MERCHANT_RETURN_DATA,  # The payment amount may be retrieved here.
         Constants.PAYMENT_METHOD,
         Constants.PSP_REFERENCE,
     )
+    HASH_FIELD = Constants.MERCHANT_SIG
 
     # Note that the order of the keys matter to compute the hash!
     HASH_KEYS = (
@@ -335,3 +350,20 @@ class PaymentResponse(BaseResponse):
         Constants.SKIN_CODE,
         Constants.MERCHANT_RETURN_DATA,
     )
+
+    def validate(self):
+        super().validate()
+
+        # Check that the transaction has not been tampered with.
+        received_hash = self.params.get(self.HASH_FIELD)
+        expected_hash = self.hash()
+        if expected_hash != received_hash:
+            raise InvalidTransactionException(
+                "The transaction is invalid. "
+                "This may indicate a fraud attempt."
+            )
+
+    def process(self):
+        payment_result = self.params.get(Constants.AUTH_RESULT, None)
+        accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
+        return accepted, payment_result, self.params

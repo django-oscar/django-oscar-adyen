@@ -11,7 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
-from .gateway import Gateway, Constants, PaymentResponse
+from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
 
 logger = logging.getLogger('adyen')
@@ -59,14 +59,16 @@ class Facade():
     def _get_origin_ip_address(cls, request):
         """
         Return the IP address where the payment originated from or None if
-        we are unable to get it.
+        we are unable to get it -- which *will* happen if we received a
+        PaymentNotification rather than a PaymentRedirection, since the
+        request, in that case, comes from the Adyen servers.
 
-        We need to fetch the *real* origin IP address. According to
-        the platform architecture, it may be transmitted to our application
-        via vastly variable HTTP headers. The name of the relevant header is
-        therefore configurable via the `ADYEN_IP_ADDRESS_HTTP_HEADER` Django
-        setting. We fallback on the canonical `REMOTE_ADDR`, used for regular,
-        unproxied requests.
+        When possible, we need to fetch the *real* origin IP address.
+        According to the platform architecture, it may be transmitted to our
+        application via vastly variable HTTP headers. The name of the relevant
+        header is therefore configurable via the `ADYEN_IP_ADDRESS_HTTP_HEADER`
+        Django setting. We fallback on the canonical `REMOTE_ADDR`, used for
+        regular, unproxied requests.
         """
         try:
             ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
@@ -91,7 +93,17 @@ class Facade():
         order_number = details.get(Constants.MERCHANT_REFERENCE, '')
         reference = details.get(Constants.PSP_REFERENCE, '')
         method = details.get(Constants.PAYMENT_METHOD, '')
-        amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
+
+        # The payment amount is transmitted in a different parameter whether
+        # we are in the context of a PaymentRedirection (`merchantReturnData`)
+        # or a PaymentNotification (`value`). Both fields are mandatory in the
+        # respective context, ensuring we always get back our amount.
+        # This is, however, not generic in case of using the backend outside
+        # the oshop project, since it is our decision to store the amount in
+        # the `merchantReturnData` field. Leaving a TODO here to make this more
+        # generic at a later date.
+        amount = int(details.get(Constants.MERCHANT_RETURN_DATA, Constants.VALUE))
+
         return order_number, reference, method, amount
 
     def _record_audit_trail(self, request, status, details):
@@ -113,7 +125,14 @@ class Facade():
             logger.exception("Unable to record audit trail for transaction "
                              "with reference %s" % reference)
 
-        # We try to record the IP address where the payment originated from.
+        # If we received a PaymentNotification via a POST request, we cannot
+        # accurately record the origin IP address. It will, however, be made
+        # available in the daily Received Payment Report, which we can then
+        # process to reconcile the data (TODO at some point).
+        if request.method == 'POST':
+            return
+
+        # Otherwise, we try to record the origin IP address.
         ip_address = self._get_origin_ip_address(request)  # None if not found
         if ip_address is not None:
             try:
@@ -134,10 +153,21 @@ class Facade():
         """
         success, output_data = False, {}
 
-        # We must first validate the Adyen response.
+        # We must first find out whether this is a redirection or a notification.
         client = self.gateway
-        params = request.POST if request.method == 'POST' else request.GET
-        response = PaymentResponse(client, params)
+        params = response_klass = None
+
+        if request.method == 'GET':
+            params = request.GET
+            response_class = PaymentRedirection
+        elif request.method == 'POST':
+            params = request.POST
+            response_class = PaymentNotification
+        else:
+            raise RuntimeError("Only GET and POST requests are supported.")
+
+        # Then we can instantiate the appropriate class from the gateway.
+        response = response_class(client, params)
 
         # Note that this may raise an exception if the response is invalid.
         # For example: MissingFieldException, UnexpectedFieldException, ...
