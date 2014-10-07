@@ -276,7 +276,7 @@ class PaymentFormRequest(FormRequest):
         Constants.BILLING_ADDRESS_TYPE,
         Constants.DELIVERY_ADDRESS_TYPE,
         Constants.SHOPPER_TYPE,
-        Constants.OFFSET
+        Constants.OFFSET,
     )
 
 
@@ -311,13 +311,15 @@ class PaymentNotification(BaseResponse):
         Constants.LIVE,
         Constants.MERCHANT_ACCOUNT_CODE,
         Constants.MERCHANT_REFERENCE,
-        Constants.OPERATIONS;
-        Constants.ORIGINAL_REFERENCE,
+        Constants.OPERATIONS,
         Constants.PAYMENT_METHOD,
         Constants.PSP_REFERENCE,
         Constants.REASON,
         Constants.SUCCESS,
         Constants.VALUE,  # The payment amount may be retrieved here.
+    )
+    OPTIONAL_FIELDS = (
+        Constants.ORIGINAL_REFERENCE,
     )
 
     def process(self):

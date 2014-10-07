@@ -102,7 +102,7 @@ class Facade():
         # the oshop project, since it is our decision to store the amount in
         # the `merchantReturnData` field. Leaving a TODO here to make this more
         # generic at a later date.
-        amount = int(details.get(Constants.MERCHANT_RETURN_DATA, Constants.VALUE))
+        amount = int(details.get(Constants.MERCHANT_RETURN_DATA, details.get(Constants.VALUE)))
 
         return order_number, reference, method, amount
 

@@ -44,15 +44,31 @@ EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'shopperReference', 'value': 123},
 ]
 
-AUTHORISED_PAYMENT_PARAMS = {
-    'merchantReference': '40100020137',
-    'skinCode': 'cqQJKZpg',
-    'shopperLocale': 'en_GB',
-    'paymentMethod': 'visa',
+AUTHORISED_PAYMENT_PARAMS_GET = {
     'authResult': 'AUTHORISED',
-    'pspReference': '8614068242050184',
+    'merchantReference': '40100020137',
     'merchantReturnData': '67864',
     'merchantSig': 'k5Ji9eQ5kSoLdEHfydfDognnsoo=',
+    'paymentMethod': 'visa',
+    'pspReference': '8614068242050184',
+    'shopperLocale': 'en_GB',
+    'skinCode': 'cqQJKZpg',
+}
+
+AUTHORISED_PAYMENT_PARAMS_POST = {
+    'currency': 'EUR',
+    'eventCode': 'AUTHORISATION',
+    'live': 'false',
+    'eventDate': '2014-09-30T12:30:53.40Z',
+    'merchantAccountCode': 'OscaroBE',
+    'merchantReference': '00050158',
+    'operations': 'CANCEL,CAPTURE,REFUND',
+    'originalReference': '',
+    'paymentMethod': 'visa',
+    'pspReference': '7914120802434172',
+    'reason': '32853:1111:6/2016',
+    'success': 'true',
+    'value': '21714',
 }
 
 CANCELLED_PAYMENT_PARAMS = {
@@ -259,7 +275,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
         authorised, info = self.scaffold.check_payment_outcome(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -273,7 +289,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
         authorised, info = self.scaffold.handle_payment_feedback(self.request)
         self.assertTrue(authorised)
         self.assertEqual(info.get('amount'), 67864)
@@ -289,21 +305,28 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
 
-        # We delete the previously recorded AdyenTransaction
+        # We delete the previously recorded AdyenTransaction.
         AdyenTransaction.objects.filter(status='AUTHORISED').delete()
 
-        # We now test with POST instead of GET
+        # We now test with POST instead of GET.
         self.request.method = 'POST'
-        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
         self.request.GET = None
 
+        # This is going to fail because the mandatory fields are not the same
+        # for GET and POST requests.
+        with self.assertRaises(MissingFieldException):
+            authorised, info = self.scaffold.handle_payment_feedback(self.request)
+
+        # So, let's try again with valid POST parameters.
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
         authorised, info = self.scaffold.handle_payment_feedback(self.request)
         self.assertTrue(authorised)
-        self.assertEqual(info.get('amount'), 67864)
+        self.assertEqual(info.get('amount'), 21714)
         self.assertEqual(info.get('method'), 'adyen')
         self.assertEqual(info.get('ip_address'), '127.0.0.1')
         self.assertEqual(info.get('status'), 'AUTHORISED')
-        self.assertEqual(info.get('reference'), '8614068242050184')
+        self.assertEqual(info.get('reference'), '7914120802434172')
 
         # After calling `handle_payment_feedback` there is one authorised
         # transaction and no refused transaction in the database.
@@ -311,7 +334,6 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_authorised_transactions, 1)
         num_refused_transactions = AdyenTransaction.objects.filter(status='REFUSED').count()
         self.assertEqual(num_refused_transactions, 0)
-
 
     def test_handle_authorized_payment_if_no_ip_address_was_found(self):
         """
@@ -319,7 +341,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         We just want to ensure that the backend does not crash if we haven't
         been able to find a reliable origin IP address.
         """
-        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS)
+        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
 
         # Before the test, there are no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
