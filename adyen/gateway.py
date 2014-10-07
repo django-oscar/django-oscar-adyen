@@ -14,17 +14,49 @@ logger = logging.getLogger('adyen')
 
 class Constants:
 
-    ADYEN = 'adyen'
-
-    IDENTIFIER = 'identifier'
-    SECRET_KEY = 'secret_key'
     ACTION_URL = 'action_url'
+    ADYEN = 'adyen'
+    ALLOWED_METHODS = 'allowedMethods'
+    AUTH_RESULT = 'authResult'
+    BILLING_ADDRESS_TYPE = 'billingAddressType'
+    BLOCKED_METHODS = 'blockedMethods'
+    COUNTRY_CODE = 'countryCode'
+    CURRENCY = 'currency'
+    CURRENCY_CODE = 'currencyCode'
+    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
+    EVENT_CODE = 'eventCode'
+    EVENT_DATE = 'eventDate'
+    FALSE = 'false'
+    IDENTIFIER = 'identifier'
+    LIVE = 'live'
 
     MERCHANT_ACCOUNT = 'merchantAccount'
+    MERCHANT_ACCOUNT_CODE = 'merchantAccountCode'
     MERCHANT_REFERENCE = 'merchantReference'
-    MERCHANT_RETURN_URL = 'resURL'
     MERCHANT_RETURN_DATA = 'merchantReturnData'
+    MERCHANT_RETURN_URL = 'resURL'
     MERCHANT_SIG = 'merchantSig'
+
+    OFFSET = 'offset'
+    OPERATIONS = 'operations'
+    ORIGINAL_REFERENCE = 'originalReference'
+
+    PAYMENT_AMOUNT = 'paymentAmount'
+    PAYMENT_METHOD = 'paymentMethod'
+    PAYMENT_RESULT_AUTHORISED = 'AUTHORISED'
+    PAYMENT_RESULT_REFUSED = 'REFUSED'
+    PAYMENT_RESULT_CANCELLED = 'CANCELLED'
+    PAYMENT_RESULT_PENDING = 'PENDING'
+    PAYMENT_RESULT_ERROR = 'ERROR'
+
+    PSP_REFERENCE = 'pspReference'
+    REASON = 'reason'
+    RECURRING_CONTRACT = 'recurringContract'
+    SECRET_KEY = 'secret_key'
+    SEPARATOR = '|'
+    SESSION_VALIDITY = 'sessionValidity'
+    SKIN_CODE = 'skinCode'
+    SHIP_BEFORE_DATE = 'shipBeforeDate'
 
     SHOPPER_EMAIL = 'shopperEmail'
     SHOPPER_LOCALE = 'shopperLocale'
@@ -32,30 +64,9 @@ class Constants:
     SHOPPER_STATEMENT = 'shopperStatement'
     SHOPPER_TYPE = 'shopperType'
 
-    COUNTRY_CODE = 'countryCode'
-    CURRENCY_CODE = 'currencyCode'
-    PAYMENT_AMOUNT = 'paymentAmount'
-
-    SKIN_CODE = 'skinCode'
-    SHIP_BEFORE_DATE = 'shipBeforeDate'
-    SESSION_VALIDITY = 'sessionValidity'
-
-    PAYMENT_METHOD = 'paymentMethod'
-    ALLOWED_METHODS = 'allowedMethods'
-    BLOCKED_METHODS = 'blockedMethods'
-    RECURRING_CONTRACT = 'recurringContract'
-    BILLING_ADDRESS_TYPE = 'billingAddressType'
-    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
-    OFFSET = 'offset'
-
-    PSP_REFERENCE = 'pspReference'
-    AUTH_RESULT = 'authResult'
-
-    PAYMENT_RESULT_AUTHORISED = 'AUTHORISED'
-    PAYMENT_RESULT_REFUSED = 'REFUSED'
-    PAYMENT_RESULT_CANCELLED = 'CANCELLED'
-    PAYMENT_RESULT_PENDING = 'PENDING'
-    PAYMENT_RESULT_ERROR = 'ERROR'
+    SUCCESS = 'success'
+    TRUE = 'true'
+    VALUE = 'value'
 
 
 # ---[ EXCEPTIONS ]---
