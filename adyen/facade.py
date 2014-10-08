@@ -90,8 +90,8 @@ class Facade():
         """
         Helper: extract data from the return value of `response.process`.
         """
-        merchant_reference = details.get(Constants.MERCHANT_REFERENCE, '')
-        customer_id, basket_id, order_number = merchant_reference.split(Constants.SEPARATOR)
+        merchant_ref = details.get(Constants.MERCHANT_REFERENCE, '')
+        session_key, customer_id, basket_id, order_number = merchant_ref.split(Constants.SEPARATOR)
         psp_reference = details.get(Constants.PSP_REFERENCE, '')
         payment_method = details.get(Constants.PAYMENT_METHOD, '')
 
@@ -106,12 +106,13 @@ class Facade():
         amount = int(details.get(Constants.MERCHANT_RETURN_DATA, details.get(Constants.VALUE)))
 
         return {
-            'customer_id': customer_id,
-            'basket_id': basket_id,
-            'order_number': order_number,
-            'psp_reference': psp_reference,
-            'payment_method': payment_method,
             'amount': amount,
+            'basket_id': basket_id,
+            'customer_id': customer_id,
+            'order_number': order_number,
+            'payment_method': payment_method,
+            'psp_reference': psp_reference,
+            'session_key': session_key,
         }
 
     def _record_audit_trail(self, request, status, details):
@@ -221,7 +222,7 @@ class Facade():
 
         # ... provide an "unpacked" version for easier access to the
         # transaction details...
-        output_data.update(self._extract_details(details))
+        output_data.update(self._unpack_details(details))
 
         # ... and finally return the whole thing.
         return success, output_data

@@ -49,9 +49,10 @@ class Scaffold():
 
         # We need to keep track of all these identifiers to make sure the
         # application can find everything when coming back from Adyen.
-        merchant_reference = Constants.SEPARATOR.join(
-            self.client_id, self.basket_id, self.order_id
-        )
+        merchant_reference = Constants.SEPARATOR.join((str(self.session_key),
+                                                       str(self.client_id),
+                                                       str(self.basket_id),
+                                                       str(self.order_number)))
 
         # Build common field specs
         try:
