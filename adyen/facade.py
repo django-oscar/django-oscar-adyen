@@ -226,7 +226,7 @@ class Facade():
         # ... and finally return the whole thing.
         return success, output_data
 
-    def build_notification_acknowledgement(self, request):
+    def build_notification_acknowledgement_response(self, request):
         """
         Return the appropriate response to send to the Adyen servers to
         acknowledge a transaction notification.
