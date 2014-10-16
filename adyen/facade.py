@@ -131,7 +131,7 @@ class Facade():
             )
         except Exception as ex:
             logger.exception("Unable to record audit trail for transaction "
-                             "with reference %s" % reference)
+                             "with reference %s", reference)
 
         # If we received a PaymentNotification via a POST request, we cannot
         # accurately record the origin IP address. It will, however, be made
