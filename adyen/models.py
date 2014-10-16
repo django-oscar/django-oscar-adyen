@@ -11,7 +11,7 @@ class AdyenTransaction(models.Model):
 
     # Note we don't use a foreign key as the order hasn't been created
     # by the time the transaction takes place
-    order_number = models.CharField(max_length=255, db_index=True, unique=True)
+    order_number = models.CharField(max_length=255)
 
     reference = models.CharField(max_length=255)
     method = models.CharField(max_length=255, blank=True)
