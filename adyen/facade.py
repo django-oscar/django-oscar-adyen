@@ -19,17 +19,6 @@ logger = logging.getLogger('adyen')
 
 class Facade():
 
-    FEEDBACK_MESSAGES = {
-        Constants.PAYMENT_RESULT_AUTHORISED: _("Your payment was successful."),
-        Constants.PAYMENT_RESULT_REFUSED: _("Your payment was refused."),
-        Constants.PAYMENT_RESULT_CANCELLED: _("Your payment was cancelled."),
-        Constants.PAYMENT_RESULT_PENDING: _("Your payment is still pending."),
-        Constants.PAYMENT_RESULT_ERROR: _(
-            "There was a problem with your payment. "
-            "We apologize for the inconvenience."
-        ),
-    }
-
     def __init__(self, **kwargs):
         init_params = {
             Constants.IDENTIFIER: settings.ADYEN_IDENTIFIER,
@@ -114,11 +103,10 @@ class Facade():
             'psp_reference': psp_reference,
         }
 
-    def _record_audit_trail(self, request, status, details):
+    def _record_audit_trail(self, request, status, txn_details):
         """
         Record an AdyenTransaction to keep track of the current payment attempt.
         """
-        txn_details = self._unpack_details(details)
 
         # We record the audit trail.
         try:
@@ -184,49 +172,27 @@ class Facade():
 
         # Then, we can extract the received data...
         success, status, details = response.process()
+        txn_details = self._unpack_details(details)
 
-        # ... and record the audit trail if instructed to.
+        # ... and record the audit trail if instructed to...
         if record_audit_trail:
-            self._record_audit_trail(request, status, details)
+            self._record_audit_trail(request, status, txn_details)
 
-        # In case the payment was not successful, we must provide a relevant
-        # feedback to our (would be) customer.
-        if not success:
-
-            feedback_message = self.FEEDBACK_MESSAGES.get(status)
-
-            # If the customer cancelled their payment, we must raise
-            # a specific Exception to allow a different code path in the
-            # application above. This specific Exception, however, is not
-            # yet available in the official version of Oscar. If we can't
-            # find it, we fall back to the default behaviour, which is to
-            # lump cancellations with the other failure reasons.
-            if status == Constants.PAYMENT_RESULT_CANCELLED:
-                try:
-                    from oscar.apps.payment.exceptions import PaymentCancelled
-                    raise PaymentCancelled(feedback_message)
-                except ImportError:
-                    pass
-
-            # Otherwise...
-            raise UnableToTakePayment(feedback_message)
-
-        # We now fetch the data that we need to feed back to the Oscar shop...
+        # ... prepare the feedback data...
         output_data = {
             'method': Constants.ADYEN,
             'status': status,
-            'details': details,
+            'txn_details': details,
             'ip_address': self._get_origin_ip_address(request),
         }
 
-        # ... provide an "unpacked" version for easier access to the
-        # transaction details...
-        output_data.update(self._unpack_details(details))
+        # ... also provide the "unpacked" version for easier consumption...
+        output_data.update(txn_details)
 
         # ... and finally return the whole thing.
-        return success, output_data
+        return success, status, output_data
 
-    def build_notification_acknowledgement_response(self, request):
+    def build_notification_response(self, request):
         """
         Return the appropriate response to send to the Adyen servers to
         acknowledge a transaction notification.
@@ -240,4 +206,3 @@ class Facade():
         successfully sent."
         """
         return HttpResponse(Constants.ACCEPTED_NOTIFICATION)
-

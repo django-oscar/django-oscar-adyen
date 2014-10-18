@@ -9,8 +9,6 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from oscar.apps.payment.exceptions import UnableToTakePayment
-
 from freezegun import freeze_time
 
 from .gateway import MissingFieldException, InvalidTransactionException
@@ -31,37 +29,37 @@ TEST_FROZEN_TIME = '2014-07-31 17:00:00'
 
 EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'currencyCode', 'value': 'EUR'},
-    {'type': 'hidden', 'name': 'sessionValidity', 'value': '2014-07-31T17:20:00Z'},
-    {'type': 'hidden', 'name': 'skinCode', 'value': 'cqQJKZpg'},
-    {'type': 'hidden', 'name': 'resURL', 'value': TEST_RETURN_URL},
-    {'type': 'hidden', 'name': 'merchantReference', 'value': 'ORD-123'},
-    {'type': 'hidden', 'name': 'paymentAmount', 'value': 123},
-    {'type': 'hidden', 'name': 'shopperEmail', 'value': 'test@test.com'},
     {'type': 'hidden', 'name': 'merchantAccount', 'value': TEST_IDENTIFIER},
+    {'type': 'hidden', 'name': 'merchantReference', 'value': '789:456:00000000123'},
     {'type': 'hidden', 'name': 'merchantReturnData', 'value': 123},
+    {'type': 'hidden', 'name': 'merchantSig', 'value': 'Oe5/RE9sryoqncgewUDM1+nzxHk='},
+    {'type': 'hidden', 'name': 'paymentAmount', 'value': 123},
+    {'type': 'hidden', 'name': 'resURL', 'value': TEST_RETURN_URL},
+    {'type': 'hidden', 'name': 'sessionValidity', 'value': '2014-07-31T17:20:00Z'},
     {'type': 'hidden', 'name': 'shipBeforeDate', 'value': '2014-08-30'},
-    {'type': 'hidden', 'name': 'merchantSig', 'value': 'qmgTX6kGPLmDNLf3W1e1oR7g7h8='},
-    {'type': 'hidden', 'name': 'shopperReference', 'value': 123},
+    {'type': 'hidden', 'name': 'shopperEmail', 'value': 'test@test.com'},
+    {'type': 'hidden', 'name': 'shopperReference', 'value': 789},
+    {'type': 'hidden', 'name': 'skinCode', 'value': 'cqQJKZpg'},
 ]
 
 AUTHORISED_PAYMENT_PARAMS_GET = {
     'authResult': 'AUTHORISED',
-    'merchantReference': '40100020137',
-    'merchantReturnData': '67864',
-    'merchantSig': 'k5Ji9eQ5kSoLdEHfydfDognnsoo=',
+    'merchantReference': 'WVubjVRFOTPBsLNy33zqliF-vmc:109:00000109',
+    'merchantReturnData': '13894',
+    'merchantSig': '99Y+9EiSuT6W4rd/M3zg/wwwRjw=',
     'paymentMethod': 'visa',
-    'pspReference': '8614068242050184',
+    'pspReference': '8814136447235922',
     'shopperLocale': 'en_GB',
-    'skinCode': 'cqQJKZpg',
+    'skinCode': '4d72uQqA',
 }
 
 AUTHORISED_PAYMENT_PARAMS_POST = {
     'currency': 'EUR',
     'eventCode': 'AUTHORISATION',
     'live': 'false',
-    'eventDate': '2014-09-30T12:30:53.40Z',
+    'eventDate': '2014-10-18T17:00:00.00Z',
     'merchantAccountCode': 'OscaroBE',
-    'merchantReference': '00050158',
+    'merchantReference': '789:456:00000000123',
     'operations': 'CANCEL,CAPTURE,REFUND',
     'originalReference': '',
     'paymentMethod': 'visa',
@@ -72,34 +70,34 @@ AUTHORISED_PAYMENT_PARAMS_POST = {
 }
 
 CANCELLED_PAYMENT_PARAMS = {
-    'merchantReference': '00000045',
-    'skinCode': 'cqQJKZpg',
-    'shopperLocale': 'en_GB',
     'authResult': 'CANCELLED',
-    'merchantReturnData': '25956',
-    'merchantSig': 'Z5s7N0AwQ5BuK4p05tAzdzrE3K4=',
+    'merchantReference': 'WVubjVRFOTPBsLNy33zqliF-vmc:110:00000110',
+    'merchantReturnData': '13894',
+    'merchantSig': 'AMkos00Nn+bTgS3Ndm2bgnRBj1c=',
+    'shopperLocale': 'en_GB',
+    'skinCode': '4d72uQqA',
 }
 
 REFUSED_PAYMENT_PARAMS = {
-    'merchantReference': '40100020139',
-    'skinCode': 'cqQJKZpg',
-    'shopperLocale': 'en_GB',
-    'paymentMethod': 'visa',
     'authResult': 'REFUSED',
-    'pspReference': '8614068251598198',
-    'merchantReturnData': '67864',
-    'merchantSig': '3KI5SiHHkftRwzoM7gue4D0aIaY=',
+    'merchantReference': 'WVubjVRFOTPBsLNy33zqliF-vmc:110:00000110',
+    'merchantReturnData': '13894',
+    'merchantSig': '1fFM0LaC0uhsN3L/C9nddUeMiyw=',
+    'paymentMethod': 'visa',
+    'pspReference': '8814136452896857',
+    'shopperLocale': 'en_GB',
+    'skinCode': '4d72uQqA',
 }
 
 TAMPERED_PAYMENT_PARAMS = {
-    'merchantReference': '40100020135',
-    'skinCode': 'cqQJKZpg',
-    'shopperLocale': 'en_GB',
-    'paymentMethod': 'visa',
     'authResult': 'AUTHORISED',
-    'pspReference': '8614068228971221',
-    'merchantReturnData': '67864',
+    'merchantReference': 'WVubjVRFOTPBsLNy33zqliF-vmc:109:00000109',
+    'merchantReturnData': '13894',
     'merchantSig': '14M4N3V1LH4X0RZ',
+    'paymentMethod': 'visa',
+    'pspReference': '8814136447235922',
+    'shopperLocale': 'en_GB',
+    'skinCode': '4d72uQqA',
 }
 
 
@@ -114,12 +112,14 @@ class AdyenTestCase(TestCase):
         super().setUp()
 
         self.order_data = {
-            'order_id': 'ORD-123',
-            'client_id': 123,
-            'client_email': 'test@test.com',
             'amount': 123,
+            'basket_id': 456,
+            'client_email': 'test@test.com',
+            'client_id': 789,
             'currency_code': 'EUR',
             'description': 'Order #123',
+            'order_id': 'ORD-123',
+            'order_number': '00000000123',
             'return_url': TEST_RETURN_URL,
         }
         self.scaffold = Scaffold(self.order_data)
@@ -276,13 +276,15 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_recorded_transactions, 0)
 
         self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
-        authorised, info = self.scaffold.check_payment_outcome(self.request)
-        self.assertTrue(authorised)
-        self.assertEqual(info.get('amount'), 67864)
-        self.assertEqual(info.get('method'), 'adyen')
-        self.assertEqual(info.get('ip_address'), '127.0.0.1')
-        self.assertEqual(info.get('status'), 'AUTHORISED')
-        self.assertEqual(info.get('reference'), '8614068242050184')
+        success, status, details = self.scaffold.check_payment_outcome(self.request)
+
+        self.assertTrue(success)
+        self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
+        self.assertEqual(details.get('amount'), 13894)
+        self.assertEqual(details.get('ip_address'), '127.0.0.1')
+        self.assertEqual(details.get('method'), 'adyen')
+        self.assertEqual(details.get('psp_reference'), '8814136447235922')
+        self.assertEqual(details.get('status'), 'AUTHORISED')
 
         # After calling `check_payment_outcome`, there are still no recorded
         # transactions in the database.
@@ -290,13 +292,15 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_recorded_transactions, 0)
 
         self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
-        authorised, info = self.scaffold.handle_payment_feedback(self.request)
-        self.assertTrue(authorised)
-        self.assertEqual(info.get('amount'), 67864)
-        self.assertEqual(info.get('method'), 'adyen')
-        self.assertEqual(info.get('ip_address'), '127.0.0.1')
-        self.assertEqual(info.get('status'), 'AUTHORISED')
-        self.assertEqual(info.get('reference'), '8614068242050184')
+        success, status, details = self.scaffold.handle_payment_feedback(self.request)
+
+        self.assertTrue(success)
+        self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
+        self.assertEqual(details.get('amount'), 13894)
+        self.assertEqual(details.get('ip_address'), '127.0.0.1')
+        self.assertEqual(details.get('method'), 'adyen')
+        self.assertEqual(details.get('psp_reference'), '8814136447235922')
+        self.assertEqual(details.get('status'), 'AUTHORISED')
 
         # After calling `handle_payment_feedback` there is one authorised
         # transaction and no refused transaction in the database.
@@ -320,13 +324,15 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
         # So, let's try again with valid POST parameters.
         self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
-        authorised, info = self.scaffold.handle_payment_feedback(self.request)
-        self.assertTrue(authorised)
-        self.assertEqual(info.get('amount'), 21714)
-        self.assertEqual(info.get('method'), 'adyen')
-        self.assertEqual(info.get('ip_address'), '127.0.0.1')
-        self.assertEqual(info.get('status'), 'AUTHORISED')
-        self.assertEqual(info.get('reference'), '7914120802434172')
+        success, status, details = self.scaffold.handle_payment_feedback(self.request)
+
+        self.assertTrue(success)
+        self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
+        self.assertEqual(details.get('amount'), 21714)
+        self.assertEqual(details.get('ip_address'), '127.0.0.1')
+        self.assertEqual(details.get('method'), 'adyen')
+        self.assertEqual(details.get('psp_reference'), '7914120802434172')
+        self.assertEqual(details.get('status'), 'AUTHORISED')
 
         # After calling `handle_payment_feedback` there is one authorised
         # transaction and no refused transaction in the database.
@@ -355,13 +361,15 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertIsNone(ip_address)
 
         # ... and finally make sure everything works as expected.
-        authorised, info = self.scaffold.handle_payment_feedback(self.request)
-        self.assertTrue(authorised)
-        self.assertEqual(info.get('amount'), 67864)
-        self.assertEqual(info.get('method'), 'adyen')
-        self.assertIsNone(info.get('ip_address'))
-        self.assertEqual(info.get('status'), 'AUTHORISED')
-        self.assertEqual(info.get('reference'), '8614068242050184')
+        success, status, details = self.scaffold.handle_payment_feedback(self.request)
+
+        self.assertTrue(success)
+        self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
+        self.assertEqual(details.get('amount'), 13894)
+        self.assertEqual(details.get('method'), 'adyen')
+        self.assertEqual(details.get('psp_reference'), '8814136447235922')
+        self.assertEqual(details.get('status'), 'AUTHORISED')
+        self.assertIsNone(details.get('ip_address'))
 
         # After the test there's one authorised transaction and no refused transaction in the DB.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
@@ -376,14 +384,9 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_recorded_transactions, 0)
 
         self.request.GET = deepcopy(CANCELLED_PAYMENT_PARAMS)
-
-        try:
-            from oscar.apps.payment.exceptions import PaymentCancelled
-        except ImportError:
-            from oscar.apps.payment.exceptions import UnableToTakePayment as PaymentCancelled
-
-        with self.assertRaises(PaymentCancelled):
-            self.scaffold.handle_payment_feedback(self.request)
+        success, status, __ = self.scaffold.handle_payment_feedback(self.request)
+        self.assertFalse(success)
+        self.assertEqual(status, Scaffold.PAYMENT_STATUS_CANCELLED)
 
         # After the test there's one cancelled transaction and no authorised transaction in the DB.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()
@@ -398,8 +401,9 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_recorded_transactions, 0)
 
         self.request.GET = deepcopy(REFUSED_PAYMENT_PARAMS)
-        with self.assertRaises(UnableToTakePayment):
-            self.scaffold.handle_payment_feedback(self.request)
+        success, status, __ = self.scaffold.handle_payment_feedback(self.request)
+        self.assertFalse(success)
+        self.assertEqual(status, Scaffold.PAYMENT_STATUS_REFUSED)
 
         # After the test there's one refused transaction and no authorised transaction in the DB.
         num_authorised_transactions = AdyenTransaction.objects.filter(status='AUTHORISED').count()

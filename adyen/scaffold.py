@@ -12,6 +12,20 @@ from .gateway import Constants, MissingFieldException
 
 class Scaffold():
 
+    # These are the constants that all scaffolds are expected to return
+    # to a multi-psp application. They might look like those actually returned
+    # by the psp itself, but that would be a pure coincidence.
+    PAYMENT_STATUS_ACCEPTED = 'ACCEPTED'
+    PAYMENT_STATUS_CANCELLED = 'CANCELLED'
+    PAYMENT_STATUS_REFUSED = 'REFUSED'
+
+    # This is the mapping between Adyen-specific and these standard statuses
+    ADYEN_TO_COMMON_PAYMENT_STATUSES = {
+        Constants.PAYMENT_RESULT_AUTHORISED: PAYMENT_STATUS_ACCEPTED,
+        Constants.PAYMENT_RESULT_CANCELLED: PAYMENT_STATUS_CANCELLED,
+        Constants.PAYMENT_RESULT_REFUSED: PAYMENT_STATUS_REFUSED,
+    }
+
     def __init__(self, order_data=None):
         self.facade = Facade()
         try:
@@ -83,24 +97,24 @@ class Scaffold():
 
         return self.facade.build_payment_form_fields(field_specs)
 
+    def _normalize_feedback(self, feedback):
+        """
+        Convert the facade feedback to a standardized one,
+        common to all payment provider backends.
+        """
+        success, adyen_status, details = feedback
+        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES.get(adyen_status)
+        return success, common_status, details
+
     def handle_payment_feedback(self, request):
-        """
-        Handle the post-payment process:
-        - No Exception: payment was accepted
-        - UnableToTakePayment: payment was refused
-        - PaymentCancelled: payment was cancelled (duh)
-        Record the audit trail of the transaction if everything is fine.
-        """
-        return self.facade.handle_payment_feedback(request, record_audit_trail=True)
+        return self._normalize_feedback(
+            self.facade.handle_payment_feedback(
+                request, record_audit_trail=True))
 
     def check_payment_outcome(self, request):
-        """
-        Check the payment outcome:
-        - No Exception: payment was accepted
-        - UnableToTakePayment: payment was refused
-        - PaymentCancelled: payment was cancelled (duh)
-        """
-        return self.facade.handle_payment_feedback(request, record_audit_trail=False)
+        return self._normalize_feedback(
+            self.facade.handle_payment_feedback(
+                request, record_audit_trail=False))
 
-    def build_notification_acknowledgement(self, request):
-        return self.facade.build_notification_acknowledgement(request)
+    def build_notification_response(self, request):
+        return self.facade.build_notification_response(request)
