@@ -14,17 +14,51 @@ logger = logging.getLogger('adyen')
 
 class Constants:
 
-    ADYEN = 'adyen'
+    ACCEPTED_NOTIFICATION = '[accepted]'
 
-    IDENTIFIER = 'identifier'
-    SECRET_KEY = 'secret_key'
     ACTION_URL = 'action_url'
+    ADYEN = 'adyen'
+    ALLOWED_METHODS = 'allowedMethods'
+    AUTH_RESULT = 'authResult'
+    BILLING_ADDRESS_TYPE = 'billingAddressType'
+    BLOCKED_METHODS = 'blockedMethods'
+    COUNTRY_CODE = 'countryCode'
+    CURRENCY = 'currency'
+    CURRENCY_CODE = 'currencyCode'
+    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
+    EVENT_CODE = 'eventCode'
+    EVENT_DATE = 'eventDate'
+    FALSE = 'false'
+    IDENTIFIER = 'identifier'
+    LIVE = 'live'
 
     MERCHANT_ACCOUNT = 'merchantAccount'
+    MERCHANT_ACCOUNT_CODE = 'merchantAccountCode'
     MERCHANT_REFERENCE = 'merchantReference'
-    MERCHANT_RETURN_URL = 'resURL'
     MERCHANT_RETURN_DATA = 'merchantReturnData'
+    MERCHANT_RETURN_URL = 'resURL'
     MERCHANT_SIG = 'merchantSig'
+
+    OFFSET = 'offset'
+    OPERATIONS = 'operations'
+    ORIGINAL_REFERENCE = 'originalReference'
+
+    PAYMENT_AMOUNT = 'paymentAmount'
+    PAYMENT_METHOD = 'paymentMethod'
+    PAYMENT_RESULT_AUTHORISED = 'AUTHORISED'
+    PAYMENT_RESULT_REFUSED = 'REFUSED'
+    PAYMENT_RESULT_CANCELLED = 'CANCELLED'
+    PAYMENT_RESULT_PENDING = 'PENDING'
+    PAYMENT_RESULT_ERROR = 'ERROR'
+
+    PSP_REFERENCE = 'pspReference'
+    REASON = 'reason'
+    RECURRING_CONTRACT = 'recurringContract'
+    SECRET_KEY = 'secret_key'
+    SEPARATOR = ':'
+    SESSION_VALIDITY = 'sessionValidity'
+    SKIN_CODE = 'skinCode'
+    SHIP_BEFORE_DATE = 'shipBeforeDate'
 
     SHOPPER_EMAIL = 'shopperEmail'
     SHOPPER_LOCALE = 'shopperLocale'
@@ -32,30 +66,9 @@ class Constants:
     SHOPPER_STATEMENT = 'shopperStatement'
     SHOPPER_TYPE = 'shopperType'
 
-    COUNTRY_CODE = 'countryCode'
-    CURRENCY_CODE = 'currencyCode'
-    PAYMENT_AMOUNT = 'paymentAmount'
-
-    SKIN_CODE = 'skinCode'
-    SHIP_BEFORE_DATE = 'shipBeforeDate'
-    SESSION_VALIDITY = 'sessionValidity'
-
-    PAYMENT_METHOD = 'paymentMethod'
-    ALLOWED_METHODS = 'allowedMethods'
-    BLOCKED_METHODS = 'blockedMethods'
-    RECURRING_CONTRACT = 'recurringContract'
-    BILLING_ADDRESS_TYPE = 'billingAddressType'
-    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
-    OFFSET = 'offset'
-
-    PSP_REFERENCE = 'pspReference'
-    AUTH_RESULT = 'authResult'
-
-    PAYMENT_RESULT_AUTHORISED = 'AUTHORISED'
-    PAYMENT_RESULT_REFUSED = 'REFUSED'
-    PAYMENT_RESULT_CANCELLED = 'CANCELLED'
-    PAYMENT_RESULT_PENDING = 'PENDING'
-    PAYMENT_RESULT_ERROR = 'ERROR'
+    SUCCESS = 'success'
+    TRUE = 'true'
+    VALUE = 'value'
 
 
 # ---[ EXCEPTIONS ]---
@@ -90,7 +103,6 @@ class Gateway:
         """
         Initialize an Adyen gateway.
         """
-
         self.identifier = settings.get(Constants.IDENTIFIER)
         self.secret_key = settings.get(Constants.SECRET_KEY)
         self.action_url = settings.get(Constants.ACTION_URL)
@@ -146,22 +158,21 @@ class Gateway:
 
     def _build_form_fields(self, adyen_request):
         """
-        Return the hidden fields of an HTML form
-        allowing to perform this request.
+        Return the hidden fields of an HTML form allowing to perform this request.
         """
         return adyen_request.build_form_fields()
 
     def build_payment_form_fields(self, params):
         return self._build_form_fields(PaymentFormRequest(self, params))
 
-    def _process_response(self, adyen_response, query_string):
+    def _process_response(self, adyen_response, params):
         """
         Process an Adyen response.
         """
         return adyen_response.process()
 
-    def process_payment_response(self, query_string):
-        return self._process_response(PaymentResponse(self, query_string))
+    def process_payment_response(self, params):
+        return self._process_response(PaymentResponse(self, params))
 
 
 class BaseInteraction:
@@ -171,7 +182,6 @@ class BaseInteraction:
         Validate required and optional fields for both
         requests and responses.
         """
-
         params = self.params
 
         # Check that all mandatory fields are present.
@@ -203,7 +213,7 @@ class BaseRequest(BaseInteraction):
         self.validate()
 
         # Compute request hash.
-        self.params.update({Constants.MERCHANT_SIG: self.hash()})
+        self.params.update({self.HASH_FIELD: self.hash()})
 
     def validate(self):
         self.check_fields()
@@ -247,6 +257,7 @@ class PaymentFormRequest(FormRequest):
         Constants.SHOPPER_TYPE,
         Constants.OFFSET,
     )
+    HASH_FIELD = Constants.MERCHANT_SIG
 
     # Note that the order of the keys matter to compute the hash!
     HASH_KEYS = (
@@ -267,7 +278,7 @@ class PaymentFormRequest(FormRequest):
         Constants.BILLING_ADDRESS_TYPE,
         Constants.DELIVERY_ADDRESS_TYPE,
         Constants.SHOPPER_TYPE,
-        Constants.OFFSET
+        Constants.OFFSET,
     )
 
 
@@ -276,37 +287,51 @@ class PaymentFormRequest(FormRequest):
 class BaseResponse(BaseInteraction):
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
+    HASH_FIELD = None
     HASH_KEYS = ()
 
-    def __init__(self, client, query_string):
+    def __init__(self, client, params):
         self.client = client
         self.secret_key = client.secret_key
-        self.params = parse_qs(query_string, keep_blank_values=True)
-        self.params = {key: value[0] for (key, value) in self.params.items()}
+        self.params = params
 
     def validate(self):
-
         self.check_fields()
-
-        # Check that the transaction has not been tampered with.
-        received_hash = self.params.pop(Constants.MERCHANT_SIG)
-        expected_hash = self.hash()
-        if expected_hash != received_hash:
-            raise InvalidTransactionException(
-                "The transaction is invalid. "
-                "This may indicate a fraud attempt."
-            )
 
     def hash(self):
         return self.client._compute_hash(self.HASH_KEYS, self.params)
 
     def process(self):
-        payment_result = self.params.get(Constants.AUTH_RESULT, None)
-        accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
-        return accepted, payment_result, self.params
+        return NotImplemented
 
 
-class PaymentResponse(BaseResponse):
+class PaymentNotification(BaseResponse):
+    REQUIRED_FIELDS = (
+        Constants.CURRENCY,
+        Constants.EVENT_CODE,
+        Constants.EVENT_DATE,
+        Constants.LIVE,
+        Constants.MERCHANT_ACCOUNT_CODE,
+        Constants.MERCHANT_REFERENCE,
+        Constants.PAYMENT_METHOD,
+        Constants.PSP_REFERENCE,
+        Constants.REASON,
+        Constants.SUCCESS,
+        Constants.VALUE,  # The payment amount may be retrieved here.
+    )
+    OPTIONAL_FIELDS = (
+        Constants.OPERATIONS,
+        Constants.ORIGINAL_REFERENCE,
+    )
+
+    def process(self):
+        payment_result = self.params.get(Constants.SUCCESS, None)
+        accepted = payment_result == Constants.TRUE
+        status = Constants.PAYMENT_RESULT_AUTHORISED if accepted else PAYMENT_RESULT_REFUSED
+        return accepted, status, self.params
+
+
+class PaymentRedirection(BaseResponse):
     REQUIRED_FIELDS = (
         Constants.AUTH_RESULT,
         Constants.MERCHANT_REFERENCE,
@@ -315,10 +340,11 @@ class PaymentResponse(BaseResponse):
         Constants.SKIN_CODE,
     )
     OPTIONAL_FIELDS = (
-        Constants.MERCHANT_RETURN_DATA,
+        Constants.MERCHANT_RETURN_DATA,  # The payment amount may be retrieved here.
         Constants.PAYMENT_METHOD,
         Constants.PSP_REFERENCE,
     )
+    HASH_FIELD = Constants.MERCHANT_SIG
 
     # Note that the order of the keys matter to compute the hash!
     HASH_KEYS = (
@@ -328,3 +354,20 @@ class PaymentResponse(BaseResponse):
         Constants.SKIN_CODE,
         Constants.MERCHANT_RETURN_DATA,
     )
+
+    def validate(self):
+        super().validate()
+
+        # Check that the transaction has not been tampered with.
+        received_hash = self.params.get(self.HASH_FIELD)
+        expected_hash = self.hash()
+        if expected_hash != received_hash:
+            raise InvalidTransactionException(
+                "The transaction is invalid. "
+                "This may indicate a fraud attempt."
+            )
+
+    def process(self):
+        payment_result = self.params.get(Constants.AUTH_RESULT, None)
+        accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
+        return accepted, payment_result, self.params

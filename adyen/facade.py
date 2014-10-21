@@ -6,28 +6,18 @@ import logging
 import six
 
 from django.conf import settings
+from django.http import HttpResponse
 from django.utils.translation import ugettext_lazy as _
 
 from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
-from .gateway import Gateway, Constants, PaymentResponse
+from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
 
 logger = logging.getLogger('adyen')
 
 
 class Facade():
-
-    FEEDBACK_MESSAGES = {
-        Constants.PAYMENT_RESULT_AUTHORISED: _("Your payment was successful."),
-        Constants.PAYMENT_RESULT_REFUSED: _("Your payment was refused."),
-        Constants.PAYMENT_RESULT_CANCELLED: _("Your payment was cancelled."),
-        Constants.PAYMENT_RESULT_PENDING: _("Your payment is still pending."),
-        Constants.PAYMENT_RESULT_ERROR: _(
-            "There was a problem with your payment. "
-            "We apologize for the inconvenience."
-        ),
-    }
 
     def __init__(self, **kwargs):
         init_params = {
@@ -58,14 +48,16 @@ class Facade():
     def _get_origin_ip_address(cls, request):
         """
         Return the IP address where the payment originated from or None if
-        we are unable to get it.
+        we are unable to get it -- which *will* happen if we received a
+        PaymentNotification rather than a PaymentRedirection, since the
+        request, in that case, comes from the Adyen servers.
 
-        We need to fetch the *real* origin IP address. According to
-        the platform architecture, it may be transmitted to our application
-        via vastly variable HTTP headers. The name of the relevant header is
-        therefore configurable via the `ADYEN_IP_ADDRESS_HTTP_HEADER` Django
-        setting. We fallback on the canonical `REMOTE_ADDR`, used for regular,
-        unproxied requests.
+        When possible, we need to fetch the *real* origin IP address.
+        According to the platform architecture, it may be transmitted to our
+        application via vastly variable HTTP headers. The name of the relevant
+        header is therefore configurable via the `ADYEN_IP_ADDRESS_HTTP_HEADER`
+        Django setting. We fallback on the canonical `REMOTE_ADDR`, used for
+        regular, unproxied requests.
         """
         try:
             ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
@@ -83,45 +75,60 @@ class Facade():
 
         return ip_address
 
-    def handle_payment_feedback(self, request):
-        success, output_data = False, {}
+    def _unpack_details(self, details):
+        """
+        Helper: extract data from the return value of `response.process`.
+        """
+        merchant_ref = details.get(Constants.MERCHANT_REFERENCE, '')
+        customer_id, basket_id, order_number = merchant_ref.split(Constants.SEPARATOR)
+        psp_reference = details.get(Constants.PSP_REFERENCE, '')
+        payment_method = details.get(Constants.PAYMENT_METHOD, '')
 
-        # first, let's validate the Adyen response
-        client = self.gateway
-        query_string = request.META['QUERY_STRING']
-        response = PaymentResponse(client, query_string)
+        # The payment amount is transmitted in a different parameter whether
+        # we are in the context of a PaymentRedirection (`merchantReturnData`)
+        # or a PaymentNotification (`value`). Both fields are mandatory in the
+        # respective context, ensuring we always get back our amount.
+        # This is, however, not generic in case of using the backend outside
+        # the oshop project, since it is our decision to store the amount in
+        # the `merchantReturnData` field. Leaving a TODO here to make this more
+        # generic at a later date.
+        amount = int(details.get(Constants.MERCHANT_RETURN_DATA, details.get(Constants.VALUE)))
 
-        # Note that this may raise an exception if the response is invalid.
-        # For example: MissingFieldException, UnexpectedFieldException, ...
-        # The code "above" should be prepared to deal with it accordingly.
-        response.validate()
+        return {
+            'amount': amount,
+            'basket_id': basket_id,
+            'customer_id': customer_id,
+            'order_number': order_number,
+            'payment_method': payment_method,
+            'psp_reference': psp_reference,
+        }
 
-        # then, extract received data
-        success, status, details = response.process()
-
-        order_number = details.get(Constants.MERCHANT_REFERENCE, '')
-        reference = details.get(Constants.PSP_REFERENCE, '')
-        method = details.get(Constants.PAYMENT_METHOD, '')
-
-        # Adyen does not provide the payment amount in the
-        # return URL, so we store it in this field to
-        # avoid a database query to get it back then.
-        amount = int(details.get(Constants.MERCHANT_RETURN_DATA))
+    def _record_audit_trail(self, request, status, txn_details):
+        """
+        Record an AdyenTransaction to keep track of the current payment attempt.
+        """
 
         # We record the audit trail.
         try:
             txn_log = AdyenTransaction.objects.create(
-                order_number=order_number,
-                reference=reference,
-                method=method,
-                amount=amount,
+                order_number=txn_details['order_number'],
+                reference=txn_details['psp_reference'],
+                method=txn_details['payment_method'],
+                amount=txn_details['amount'],
                 status=status,
             )
         except Exception as ex:
             logger.exception("Unable to record audit trail for transaction "
-                             "with reference %s" % reference)
+                             "with reference %s", reference)
 
-        # We try to record the IP address where the payment originated from.
+        # If we received a PaymentNotification via a POST request, we cannot
+        # accurately record the origin IP address. It will, however, be made
+        # available in the daily Received Payment Report, which we can then
+        # process to reconcile the data (TODO at some point).
+        if request.method == 'POST':
+            return
+
+        # Otherwise, we try to record the origin IP address.
         ip_address = self._get_origin_ip_address(request)  # None if not found
         if ip_address is not None:
             try:
@@ -135,32 +142,67 @@ class Facade():
 
                 pass
 
-        if not success:
-            feedback_message = self.FEEDBACK_MESSAGES.get(status)
+    def handle_payment_feedback(self, request, record_audit_trail):
+        """
+        Validate, process, optionally record audit trail and provide feedback
+        about the current payment response.
+        """
+        success, output_data = False, {}
 
-            # If the customer cancelled their payment, we must raise
-            # a specific Exception to allow a different code path in the
-            # application above. This specific Exception, however, is not
-            # yet available in the official version of Oscar. If we can't
-            # find it, we fall back to the default behaviour, which is to
-            # lump cancellations with the other failure reasons.
-            if status == Constants.PAYMENT_RESULT_CANCELLED:
-                try:
-                    from oscar.apps.payment.exceptions import PaymentCancelled
-                    raise PaymentCancelled(feedback_message)
-                except ImportError:
-                    pass
+        # We must first find out whether this is a redirection or a notification.
+        client = self.gateway
+        params = response_class = None
 
-            # Otherwise...
-            raise UnableToTakePayment(feedback_message)
+        if request.method == 'GET':
+            params = request.GET
+            response_class = PaymentRedirection
+        elif request.method == 'POST':
+            params = request.POST
+            response_class = PaymentNotification
+        else:
+            raise RuntimeError("Only GET and POST requests are supported.")
 
-        # We now normalize the output data to feed it back to the Oscar shop.
+        # Then we can instantiate the appropriate class from the gateway.
+        response = response_class(client, params)
+
+        # Note that this may raise an exception if the response is invalid.
+        # For example: MissingFieldException, UnexpectedFieldException, ...
+        # The code "above" should be prepared to deal with it accordingly.
+        response.validate()
+
+        # Then, we can extract the received data...
+        success, status, details = response.process()
+        txn_details = self._unpack_details(details)
+
+        # ... and record the audit trail if instructed to...
+        if record_audit_trail:
+            self._record_audit_trail(request, status, txn_details)
+
+        # ... prepare the feedback data...
         output_data = {
-            'method': 'adyen',
-            'amount': amount,
+            'method': Constants.ADYEN,
             'status': status,
-            'details': details,
-            'reference': reference,
-            'ip_address': ip_address,
+            'txn_details': details,
+            'ip_address': self._get_origin_ip_address(request),
         }
-        return success, output_data
+
+        # ... also provide the "unpacked" version for easier consumption...
+        output_data.update(txn_details)
+
+        # ... and finally return the whole thing.
+        return success, status, output_data
+
+    def build_notification_response(self, request):
+        """
+        Return the appropriate response to send to the Adyen servers to
+        acknowledge a transaction notification.
+
+        Quoting the `Adyen Integration Manual` (page 26):
+
+        "The Adyen notification system requires a response within 30 seconds
+        of receipt of the notification, the server is expecting a response of
+        [accepted], including the brackets. When our systems receive this
+        response all notifications contained in the message are marked as
+        successfully sent."
+        """
+        return HttpResponse(Constants.ACCEPTED_NOTIFICATION)
