@@ -313,7 +313,6 @@ class PaymentNotification(BaseResponse):
         Constants.LIVE,
         Constants.MERCHANT_ACCOUNT_CODE,
         Constants.MERCHANT_REFERENCE,
-        Constants.OPERATIONS,
         Constants.PAYMENT_METHOD,
         Constants.PSP_REFERENCE,
         Constants.REASON,
@@ -321,6 +320,7 @@ class PaymentNotification(BaseResponse):
         Constants.VALUE,  # The payment amount may be retrieved here.
     )
     OPTIONAL_FIELDS = (
+        Constants.OPERATIONS,
         Constants.ORIGINAL_REFERENCE,
     )
 
