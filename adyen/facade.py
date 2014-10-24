@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import iptools
-import json
 import logging
-import six
 
 from django.conf import settings
 from django.http import HttpResponse
-from django.utils.translation import ugettext_lazy as _
-
-from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
 from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
@@ -107,19 +102,20 @@ class Facade():
         """
         Record an AdyenTransaction to keep track of the current payment attempt.
         """
+        reference = txn_details['psp_reference']
 
         # We record the audit trail.
         try:
             txn_log = AdyenTransaction.objects.create(
                 order_number=txn_details['order_number'],
-                reference=txn_details['psp_reference'],
+                reference=reference,
                 method=txn_details['payment_method'],
                 amount=txn_details['amount'],
                 status=status,
             )
-        except Exception as ex:
-            logger.exception("Unable to record audit trail for transaction "
-                             "with reference %s", reference)
+        except Exception as error:
+            logger.exception("unexpected error during audit trail recording for transaction "
+                             "with reference %s : %s", reference, error)
 
         # If we received a PaymentNotification via a POST request, we cannot
         # accurately record the origin IP address. It will, however, be made
