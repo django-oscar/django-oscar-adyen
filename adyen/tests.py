@@ -320,7 +320,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # This is going to fail because the mandatory fields are not the same
         # for GET and POST requests.
         with self.assertRaises(MissingFieldException):
-            authorised, info = self.scaffold.handle_payment_feedback(self.request)
+            self.scaffold.handle_payment_feedback(self.request)
 
         # So, let's try again with valid POST parameters.
         self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)

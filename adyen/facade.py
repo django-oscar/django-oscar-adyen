@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import iptools
-import json
 import logging
-import six
 
 from django.conf import settings
 from django.http import HttpResponse
-from django.utils.translation import ugettext_lazy as _
-
-from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
 from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
@@ -70,7 +65,7 @@ class Facade():
             return None
 
         if not cls._is_valid_ip_address(ip_address):
-            logger.warn("%s is not a valid IP address" % ip_address)
+            logger.warn("%s is not a valid IP address", ip_address)
             return None
 
         return ip_address
@@ -107,17 +102,24 @@ class Facade():
         """
         Record an AdyenTransaction to keep track of the current payment attempt.
         """
+        reference = txn_details['psp_reference']
 
         # We record the audit trail.
         try:
             txn_log = AdyenTransaction.objects.create(
-                order_number=txn_details['order_number'],
-                reference=txn_details['psp_reference'],
-                method=txn_details['payment_method'],
                 amount=txn_details['amount'],
+                method=txn_details['payment_method'],
+                order_number=txn_details['order_number'],
+                reference=reference,
                 status=status,
             )
-        except Exception as ex:
+        except Exception:  # pylint: disable=W0703
+
+            # Yes, this is generic, because basically, whatever happens, be it
+            # a `KeyError` in `txn_details` or an exception when creating our
+            # `AdyenTransaction`, we are going to do the same thing: log the
+            # exception and carry on. This is not critical, and this should
+            # not prevent the rest of the process.
             logger.exception("Unable to record audit trail for transaction "
                              "with reference %s", reference)
 
