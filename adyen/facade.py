@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import iptools
-import json
 import logging
-import six
 
 from django.conf import settings
 from django.http import HttpResponse
-from django.utils.translation import ugettext_lazy as _
-
-from oscar.apps.payment.exceptions import PaymentError, UnableToTakePayment
 
 from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
@@ -70,7 +65,7 @@ class Facade():
             return None
 
         if not cls._is_valid_ip_address(ip_address):
-            logger.warn("%s is not a valid IP address" % ip_address)
+            logger.warn("%s is not a valid IP address", ip_address)
             return None
 
         return ip_address
@@ -117,9 +112,9 @@ class Facade():
                 amount=txn_details['amount'],
                 status=status,
             )
-        except Exception as ex:
+        except Exception:
             logger.exception("Unable to record audit trail for transaction "
-                             "with reference %s", reference)
+                             "with reference %s", txn_details['psp_reference'])
 
         # If we received a PaymentNotification via a POST request, we cannot
         # accurately record the origin IP address. It will, however, be made

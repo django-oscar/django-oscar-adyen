@@ -5,8 +5,6 @@ import hashlib
 import hmac
 import logging
 
-from urllib.parse import parse_qs
-
 logger = logging.getLogger('adyen')
 
 
@@ -99,10 +97,13 @@ class Gateway:
         Constants.ACTION_URL,
     )
 
-    def __init__(self, settings={}):
+    def __init__(self, settings=None):
         """
         Initialize an Adyen gateway.
         """
+        if settings is None:
+            settings = {}
+
         self.identifier = settings.get(Constants.IDENTIFIER)
         self.secret_key = settings.get(Constants.SECRET_KEY)
         self.action_url = settings.get(Constants.ACTION_URL)
@@ -171,9 +172,6 @@ class Gateway:
         """
         return adyen_response.process()
 
-    def process_payment_response(self, params):
-        return self._process_response(PaymentResponse(self, params))
-
 
 class BaseInteraction:
 
@@ -207,7 +205,11 @@ class BaseRequest(BaseInteraction):
     OPTIONAL_FIELDS = ()
     HASH_KEYS = ()
 
-    def __init__(self, client, params={}):
+    def __init__(self, client, params=None):
+
+        if params is None:
+            params = {}
+
         self.client = client
         self.params = params
         self.validate()
