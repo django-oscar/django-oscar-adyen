@@ -327,7 +327,8 @@ class PaymentNotification(BaseResponse):
     def process(self):
         payment_result = self.params.get(Constants.SUCCESS, None)
         accepted = payment_result == Constants.TRUE
-        status = Constants.PAYMENT_RESULT_AUTHORISED if accepted else PAYMENT_RESULT_REFUSED
+        status = (Constants.PAYMENT_RESULT_AUTHORISED if accepted
+            else Constants.PAYMENT_RESULT_REFUSED)
         return accepted, status, self.params
 
 
