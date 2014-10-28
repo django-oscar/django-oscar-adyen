@@ -14,7 +14,7 @@ if os.environ.get('USER', '') == 'vagrant':
 setup(
 
     name='django-oscar-adyen',
-    version='0.2.1',
+    version='0.2.2',
     url='https://github.com/oscaro/django-oscar-adyen',
     author='Mathieu Richardoz',
     author_email='mr@babik.fr',
