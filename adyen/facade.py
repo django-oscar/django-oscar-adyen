@@ -102,19 +102,26 @@ class Facade():
         """
         Record an AdyenTransaction to keep track of the current payment attempt.
         """
+        reference = txn_details['psp_reference']
 
         # We record the audit trail.
         try:
             txn_log = AdyenTransaction.objects.create(
-                order_number=txn_details['order_number'],
-                reference=txn_details['psp_reference'],
-                method=txn_details['payment_method'],
                 amount=txn_details['amount'],
+                method=txn_details['payment_method'],
+                order_number=txn_details['order_number'],
+                reference=reference,
                 status=status,
             )
-        except Exception:
+        except Exception:  # pylint: disable=W0703
+
+            # Yes, this is generic, because basically, whatever happens, be it
+            # a `KeyError` in `txn_details` or an exception when creating our
+            # `AdyenTransaction`, we are going to do the same thing: log the
+            # exception and carry on. This is not critical, and this should
+            # not prevent the rest of the process.
             logger.exception("Unable to record audit trail for transaction "
-                             "with reference %s", txn_details['psp_reference'])
+                             "with reference %s", reference)
 
         # If we received a PaymentNotification via a POST request, we cannot
         # accurately record the origin IP address. It will, however, be made
