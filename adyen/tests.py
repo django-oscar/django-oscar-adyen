@@ -424,3 +424,30 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # After the test, there are still no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
+
+    def test_assess_notification_relevance(self):
+
+        self.request.method = 'POST'
+
+        # If this is an `AUTHORISATION` request targeting the proper platform,
+        # we should both process and acknowledge it.
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
+        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+        self.assertTupleEqual((must_process, must_ack), (True, True))
+
+        # If there is a mismatch between the request origin and target platforms,
+        # we should just let it be.
+        self.request.POST['live'] = 'true'
+        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+        self.assertTupleEqual((must_process, must_ack), (False, False))
+
+        self.request.POST['live'] = 'false'
+        with self.settings(ADYEN_ACTION_URL='https://live.adyen.com/hpp/select.shtml'):
+            must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+            self.assertTupleEqual((must_process, must_ack), (False, False))
+
+        # If this is not an `AUTHORISATION` request, we should acknowledge it
+        # but not try to process it.
+        self.request.POST['eventCode'] = 'REPORT_AVAILABLE'
+        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+        self.assertTupleEqual((must_process, must_ack), (False, True))
