@@ -109,6 +109,7 @@ TAMPERED_PAYMENT_PARAMS = {
     ADYEN_SKIN_CODE=TEST_SKIN_CODE,
 )
 class AdyenTestCase(TestCase):
+
     def setUp(self):
         super().setUp()
 
@@ -178,6 +179,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):
+
     def setUp(self):
         super().setUp()
         request = Mock()
