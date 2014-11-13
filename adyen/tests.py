@@ -38,6 +38,7 @@ EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'sessionValidity', 'value': '2014-07-31T17:20:00Z'},
     {'type': 'hidden', 'name': 'shipBeforeDate', 'value': '2014-08-30'},
     {'type': 'hidden', 'name': 'shopperEmail', 'value': 'test@test.com'},
+    {'type': 'hidden', 'name': 'shopperLocale', 'value': 'fr'},
     {'type': 'hidden', 'name': 'shopperReference', 'value': 789},
     {'type': 'hidden', 'name': 'skinCode', 'value': 'cqQJKZpg'},
 ]
@@ -121,6 +122,7 @@ class AdyenTestCase(TestCase):
             'order_id': 'ORD-123',
             'order_number': '00000000123',
             'return_url': TEST_RETURN_URL,
+            'shopper_locale': 'fr',
         }
         self.scaffold = Scaffold(self.order_data)
 
