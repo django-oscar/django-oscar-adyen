@@ -24,8 +24,11 @@ class Constants:
     CURRENCY = 'currency'
     CURRENCY_CODE = 'currencyCode'
     DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
+
     EVENT_CODE = 'eventCode'
+    EVENT_CODE_AUTHORISATION = 'AUTHORISATION'
     EVENT_DATE = 'eventDate'
+
     FALSE = 'false'
     IDENTIFIER = 'identifier'
     LIVE = 'live'
@@ -65,6 +68,7 @@ class Constants:
     SHOPPER_TYPE = 'shopperType'
 
     SUCCESS = 'success'
+    TEST = 'test'
     TRUE = 'true'
     VALUE = 'value'
 
