@@ -207,7 +207,7 @@ class Facade():
         # Requests may originate from the Adyen `live` or `test` platform.
         # We should completely ignore those whose origin does not match
         # the current execution platform. To do so:
-        # - On one hand we have the `OSHOP_ADYEN_ACTION_URL` setting, from which
+        # - On one hand we have the `ADYEN_ACTION_URL` setting, from which
         # we can extract the platform we are currently running against.
         # - On the other hand we have the `live` POST parameter, which lets
         # us know which Adyen platform fired this request.
