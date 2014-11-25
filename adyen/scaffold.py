@@ -117,5 +117,8 @@ class Scaffold():
             self.facade.handle_payment_feedback(
                 request, record_audit_trail=False))
 
+    def assess_notification_relevance(self, request):
+        return self.facade.assess_notification_relevance(request)
+
     def build_notification_response(self, request):
         return self.facade.build_notification_response(request)

@@ -24,8 +24,11 @@ class Constants:
     CURRENCY = 'currency'
     CURRENCY_CODE = 'currencyCode'
     DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
+
     EVENT_CODE = 'eventCode'
+    EVENT_CODE_AUTHORISATION = 'AUTHORISATION'
     EVENT_DATE = 'eventDate'
+
     FALSE = 'false'
     IDENTIFIER = 'identifier'
     LIVE = 'live'
@@ -65,6 +68,7 @@ class Constants:
     SHOPPER_TYPE = 'shopperType'
 
     SUCCESS = 'success'
+    TEST = 'test'
     TRUE = 'true'
     VALUE = 'value'
 
@@ -227,9 +231,10 @@ class BaseRequest(BaseInteraction):
 # ---[ FORM-BASED REQUESTS ]---
 
 class FormRequest(BaseRequest):
+
     def build_form_fields(self):
         return [{'type': 'hidden', 'name': name, 'value': value}
-            for name, value in self.params.items()]
+                for name, value in self.params.items()]
 
 
 class PaymentFormRequest(FormRequest):
@@ -330,7 +335,7 @@ class PaymentNotification(BaseResponse):
         payment_result = self.params.get(Constants.SUCCESS, None)
         accepted = payment_result == Constants.TRUE
         status = (Constants.PAYMENT_RESULT_AUTHORISED if accepted
-            else Constants.PAYMENT_RESULT_REFUSED)
+                  else Constants.PAYMENT_RESULT_REFUSED)
         return accepted, status, self.params
 
 

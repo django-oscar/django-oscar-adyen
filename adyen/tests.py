@@ -38,6 +38,7 @@ EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'sessionValidity', 'value': '2014-07-31T17:20:00Z'},
     {'type': 'hidden', 'name': 'shipBeforeDate', 'value': '2014-08-30'},
     {'type': 'hidden', 'name': 'shopperEmail', 'value': 'test@test.com'},
+    {'type': 'hidden', 'name': 'shopperLocale', 'value': 'fr'},
     {'type': 'hidden', 'name': 'shopperReference', 'value': 789},
     {'type': 'hidden', 'name': 'skinCode', 'value': 'cqQJKZpg'},
 ]
@@ -108,6 +109,7 @@ TAMPERED_PAYMENT_PARAMS = {
     ADYEN_SKIN_CODE=TEST_SKIN_CODE,
 )
 class AdyenTestCase(TestCase):
+
     def setUp(self):
         super().setUp()
 
@@ -121,6 +123,7 @@ class AdyenTestCase(TestCase):
             'order_id': 'ORD-123',
             'order_number': '00000000123',
             'return_url': TEST_RETURN_URL,
+            'shopper_locale': 'fr',
         }
         self.scaffold = Scaffold(self.order_data)
 
@@ -176,6 +179,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):
+
     def setUp(self):
         super().setUp()
         request = Mock()
@@ -424,3 +428,30 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # After the test, there are still no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
+
+    def test_assess_notification_relevance(self):
+
+        self.request.method = 'POST'
+
+        # If this is an `AUTHORISATION` request targeting the proper platform,
+        # we should both process and acknowledge it.
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
+        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+        self.assertTupleEqual((must_process, must_ack), (True, True))
+
+        # If there is a mismatch between the request origin and target platforms,
+        # we should just let it be.
+        self.request.POST['live'] = 'true'
+        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+        self.assertTupleEqual((must_process, must_ack), (False, False))
+
+        self.request.POST['live'] = 'false'
+        with self.settings(ADYEN_ACTION_URL='https://live.adyen.com/hpp/select.shtml'):
+            must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+            self.assertTupleEqual((must_process, must_ack), (False, False))
+
+        # If this is not an `AUTHORISATION` request, we should acknowledge it
+        # but not try to process it.
+        self.request.POST['eventCode'] = 'REPORT_AVAILABLE'
+        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
+        self.assertTupleEqual((must_process, must_ack), (False, True))

@@ -194,6 +194,44 @@ class Facade():
         # ... and finally return the whole thing.
         return success, status, output_data
 
+    def assess_notification_relevance(self, request):
+        """
+        Return a (must_process, must_acknowledge) tuple to decide what should
+        be done with this request.
+        """
+
+        # Only POST requests should be considered.
+        if request.method != 'POST':
+            return False, False
+
+        # Requests may originate from the Adyen `live` or `test` platform.
+        # We should completely ignore those whose origin does not match
+        # the current execution platform. To do so:
+        # - On one hand we have the `ADYEN_ACTION_URL` setting, from which
+        # we can extract the platform we are currently running against.
+        # - On the other hand we have the `live` POST parameter, which lets
+        # us know which Adyen platform fired this request.
+        current_platform = (Constants.LIVE
+                            if Constants.LIVE in settings.ADYEN_ACTION_URL
+                            else Constants.TEST)
+
+        origin_platform = (Constants.LIVE
+                           if request.POST.get(Constants.LIVE) == Constants.TRUE
+                           else Constants.TEST)
+
+        if current_platform != origin_platform:
+            return False, False
+
+        # Adyen fires notifications for many kinds of events, but as far as
+        # we are concerned here, we only care about payment authorizations.
+        # However, we should probably acknowledge all those notifications so
+        # Adyen doesn't keep sending them forever and ever.
+        if request.POST.get(Constants.EVENT_CODE) != Constants.EVENT_CODE_AUTHORISATION:
+            return False, True
+
+        # Seems legit, just do it :)
+        return True, True
+
     def build_notification_response(self, request):
         """
         Return the appropriate response to send to the Adyen servers to
