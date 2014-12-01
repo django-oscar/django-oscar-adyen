@@ -30,9 +30,9 @@ TEST_FROZEN_TIME = '2014-07-31 17:00:00'
 EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'currencyCode', 'value': 'EUR'},
     {'type': 'hidden', 'name': 'merchantAccount', 'value': TEST_IDENTIFIER},
-    {'type': 'hidden', 'name': 'merchantReference', 'value': '789:456:00000000123'},
+    {'type': 'hidden', 'name': 'merchantReference', 'value': '00000000123'},
     {'type': 'hidden', 'name': 'merchantReturnData', 'value': 123},
-    {'type': 'hidden', 'name': 'merchantSig', 'value': 'Oe5/RE9sryoqncgewUDM1+nzxHk='},
+    {'type': 'hidden', 'name': 'merchantSig', 'value': 'mCCvOn8nc4vdo5w2pUJ9u+mV7Gg='},
     {'type': 'hidden', 'name': 'paymentAmount', 'value': 123},
     {'type': 'hidden', 'name': 'resURL', 'value': TEST_RETURN_URL},
     {'type': 'hidden', 'name': 'sessionValidity', 'value': '2014-07-31T17:20:00Z'},

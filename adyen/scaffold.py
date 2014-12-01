@@ -61,17 +61,11 @@ class Scaffold():
         ship_before_date = now + timezone.timedelta(days=30)
         ship_before_date_format = '%Y-%m-%d'
 
-        # We need to keep track of all these identifiers to make sure the
-        # application can find everything when coming back from Adyen.
-        merchant_reference = Constants.SEPARATOR.join((str(self.client_id),
-                                                       str(self.basket_id),
-                                                       str(self.order_number)))
-
         # Build common field specs
         try:
             field_specs = {
                 Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
-                Constants.MERCHANT_REFERENCE: merchant_reference,
+                Constants.MERCHANT_REFERENCE: str(self.order_number),
                 Constants.SHOPPER_REFERENCE: self.client_id,
                 Constants.SHOPPER_EMAIL: self.client_email,
                 Constants.CURRENCY_CODE: self.currency_code,
@@ -87,6 +81,7 @@ class Scaffold():
                 Constants.MERCHANT_RETURN_DATA: self.amount,
 
             }
+
         except AttributeError:
             raise MissingFieldException
 
