@@ -74,6 +74,7 @@ class Scaffold():
                 Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
                 Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
                 Constants.SHOPPER_LOCALE: self.shopper_locale,
+                Constants.COUNTRY_CODE: self.country_code,
 
                 # Adyen does not provide the payment amount in the
                 # return URL, so we store it in this field to
