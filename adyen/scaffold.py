@@ -86,7 +86,7 @@ class Scaffold():
         except AttributeError:
             raise MissingFieldException
 
-        # Check for overriden return URL.
+        # Check for overridden return URL.
         return_url = getattr(self, 'return_url', None)
         if return_url is not None:
             return_url = return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
