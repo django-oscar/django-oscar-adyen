@@ -11,10 +11,10 @@ from django.test.utils import override_settings
 
 from freezegun import freeze_time
 
-from .gateway import MissingFieldException, InvalidTransactionException
-from .models import AdyenTransaction
-from .scaffold import Scaffold
-from .facade import Facade
+from adyen.gateway import MissingFieldException, InvalidTransactionException
+from adyen.models import AdyenTransaction
+from adyen.scaffold import Scaffold
+from adyen.facade import Facade
 
 
 TEST_IDENTIFIER = 'OscaroFR'

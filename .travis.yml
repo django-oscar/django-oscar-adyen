@@ -1,0 +1,14 @@
+language: python
+
+python:
+  - "3.3"
+  - "3.4"
+
+install:
+  - pip install 'django-oscar>=0.7'
+  - pip install -r requirements.txt
+
+env:
+  - PYTHONPATH=.:$PYTHONPATH
+
+script: py.test tests
