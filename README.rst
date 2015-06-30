@@ -2,16 +2,17 @@
 Adyen package for django-oscar
 ==============================
 
-.. image:: https://pypip.in/version/django-oscar-adyen/badge.svg
+.. image:: https://img.shields.io/pypi/v/django-oscar-adyen.svg
     :target: https://pypi.python.org/pypi/django-oscar-adyen/
-    :alt: Latest Version
+    :alt: Latest Version on PyPI
 
-.. image:: https://pypip.in/py_versions/django-oscar-adyen/badge.svg
+.. image:: https://img.shields.io/pypi/pyversions/django-oscar-adyen.svg
     :target: https://pypi.python.org/pypi/django-oscar-adyen/
     :alt: Supported Python versions
 
-.. image:: https://api.travis-ci.org/oscaro/django-oscar-adyen.svg
+.. image:: https://img.shields.io/travis/oscaro/django-oscar-adyen.svg
     :target: https://travis-ci.org/oscaro/django-oscar-adyen
+    :alt: TravisCI status
 
 This package provides integration with the `Adyen`_ payment gateway. It is
 designed to work seamlessly with the e-commerce framework `django-oscar`_ but
