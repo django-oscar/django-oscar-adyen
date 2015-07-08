@@ -7,6 +7,7 @@ from django.test.utils import override_settings
 # We use get_config() instead of adyen_config because throughout
 # the tests, we repeatedly change the Django settings.
 from adyen.config import get_config, AbstractAdyenConfig
+from adyen.settings_config import FromSettingsConfig
 
 
 @override_settings(
@@ -17,12 +18,12 @@ from adyen.config import get_config, AbstractAdyenConfig
 )
 class FromSettingsTestCase(TestCase):
     """
-    This test case tests the FromSettings confic class, which just fetches its
+    This test case tests the FromSettings config class, which just fetches its
     values from the Django settings.
     """
 
     def test_is_default(self):
-        assert 'FromSettingsConfig' in get_config().__class__.__name__
+        assert isinstance(get_config(), FromSettingsConfig)
 
     def test_value_passing_works(self):
         assert get_config().get_action_url(None) == 'foo'
@@ -51,7 +52,7 @@ class CustomConfigClassTestCase(TestCase):
     """
 
     def test_class_gets_picked_up(self):
-        assert 'DummyConfigClass' in get_config().__class__.__name__
+        assert isinstance(get_config(), DummyConfigClass)
 
     @override_settings(ADYEN_ACTION_URL='bar')
     def test_settings_ignored(self):
