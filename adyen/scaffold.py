@@ -2,12 +2,11 @@
 
 import bleach
 
-from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.utils import timezone
 
 from .facade import Facade
 from .gateway import Constants, MissingFieldException
+from .config import get_config
 
 
 class Scaffold():
@@ -36,10 +35,7 @@ class Scaffold():
 
     def get_form_action(self):
         """ Return the URL where the payment form should be submitted. """
-        try:
-            return settings.ADYEN_ACTION_URL
-        except AttributeError:
-            raise ImproperlyConfigured("Please set ADYEN_ACTION_URL")
+        return get_config().get_action_url()
 
     def get_form_fields(self):
         """ Return the payment form fields, rendered into HTML. """
@@ -64,13 +60,13 @@ class Scaffold():
         # Build common field specs
         try:
             field_specs = {
-                Constants.MERCHANT_ACCOUNT: settings.ADYEN_IDENTIFIER,
+                Constants.MERCHANT_ACCOUNT: get_config().get_identifier(),
                 Constants.MERCHANT_REFERENCE: str(self.order_number),
                 Constants.SHOPPER_REFERENCE: self.client_id,
                 Constants.SHOPPER_EMAIL: self.client_email,
                 Constants.CURRENCY_CODE: self.currency_code,
                 Constants.PAYMENT_AMOUNT: self.amount,
-                Constants.SKIN_CODE: settings.ADYEN_SKIN_CODE,
+                Constants.SKIN_CODE: get_config().get_skin_code(),
                 Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
                 Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
                 Constants.SHOPPER_LOCALE: self.shopper_locale,

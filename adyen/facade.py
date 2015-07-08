@@ -3,11 +3,11 @@
 import iptools
 import logging
 
-from django.conf import settings
 from django.http import HttpResponse
 
 from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
+from .config import get_config
 
 logger = logging.getLogger('adyen')
 
@@ -16,9 +16,9 @@ class Facade():
 
     def __init__(self, **kwargs):
         init_params = {
-            Constants.IDENTIFIER: settings.ADYEN_IDENTIFIER,
-            Constants.SECRET_KEY: settings.ADYEN_SECRET_KEY,
-            Constants.ACTION_URL: settings.ADYEN_ACTION_URL,
+            Constants.IDENTIFIER: get_config().get_identifier(),
+            Constants.SECRET_KEY: get_config().get_skin_secret(),
+            Constants.ACTION_URL: get_config().get_action_url(),
         }
         # Initialize the gateway.
         self.gateway = Gateway(init_params)
@@ -54,10 +54,7 @@ class Facade():
         Django setting. We fallback on the canonical `REMOTE_ADDR`, used for
         regular, unproxied requests.
         """
-        try:
-            ip_address_http_header = settings.ADYEN_IP_ADDRESS_HTTP_HEADER
-        except AttributeError:
-            ip_address_http_header = 'REMOTE_ADDR'
+        ip_address_http_header = get_config().get_ip_address_header()
 
         try:
             ip_address = request.META[ip_address_http_header]
@@ -209,7 +206,7 @@ class Facade():
         # - On the other hand we have the `live` POST parameter, which lets
         # us know which Adyen platform fired this request.
         current_platform = (Constants.LIVE
-                            if Constants.LIVE in settings.ADYEN_ACTION_URL
+                            if Constants.LIVE in get_config().get_action_url()
                             else Constants.TEST)
 
         origin_platform = (Constants.LIVE
