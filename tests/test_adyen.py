@@ -4,8 +4,6 @@ from copy import deepcopy
 import six
 from unittest.mock import Mock
 
-from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -102,6 +100,22 @@ TAMPERED_PAYMENT_PARAMS = {
     'skinCode': '4d72uQqA',
 }
 
+ORDER_DATA = {
+    'amount': 123,
+    'basket_id': 456,
+    'client_email': 'test@example.com',
+    'client_id': 789,
+    'currency_code': 'EUR',
+    'country_code': 'fr',
+    'description': 'Order #123',
+    'order_id': 'ORD-123',
+    'order_number': '00000000123',
+    'return_url': TEST_RETURN_URL,
+    'shopper_locale': 'fr',
+}
+
+DUMMY_REQUEST = None
+
 
 @override_settings(
     ADYEN_IDENTIFIER=TEST_IDENTIFIER,
@@ -113,21 +127,7 @@ class AdyenTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-
-        self.order_data = {
-            'amount': 123,
-            'basket_id': 456,
-            'client_email': 'test@example.com',
-            'client_id': 789,
-            'currency_code': 'EUR',
-            'country_code': 'fr',
-            'description': 'Order #123',
-            'order_id': 'ORD-123',
-            'order_number': '00000000123',
-            'return_url': TEST_RETURN_URL,
-            'shopper_locale': 'fr',
-        }
-        self.scaffold = Scaffold(self.order_data)
+        self.scaffold = Scaffold()
 
 
 class TestAdyenPaymentRequest(AdyenTestCase):
@@ -137,47 +137,29 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         """
         Test that the form action is properly fetched from the settings.
         """
-        action_url = self.scaffold.get_form_action()
+        action_url = self.scaffold.get_form_action(DUMMY_REQUEST)
         self.assertEqual(action_url, TEST_ACTION_URL)
 
-        # If the setting is missing, a proper exception is raised
-        del settings.ADYEN_ACTION_URL
-        with self.assertRaises(ImproperlyConfigured):
-            self.scaffold.get_form_action()
-
     def test_form_fields_ok(self):
-        """
-        Test that the payment form fields are properly built.
-        """
-        with freeze_time(TEST_FROZEN_TIME):
-            form_fields = self.scaffold.get_form_fields()
-            for field_spec in EXPECTED_FIELDS_LIST:
-                field = '<input type="%s" name="%s" value="%s">' % (
-                    field_spec.get('type'),
-                    field_spec.get('name'),
-                    field_spec.get('value'),
-                )
-                self.assertIn(field, form_fields)
-
-    def test_form_fields_list_ok(self):
         """
         Test that the payment form fields list is properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            fields_list = self.scaffold.get_form_fields_list()
+            fields_list = self.scaffold.get_form_fields(DUMMY_REQUEST, ORDER_DATA)
             self.assertEqual(len(fields_list), len(EXPECTED_FIELDS_LIST))
             for field in fields_list:
                 self.assertIn(field, EXPECTED_FIELDS_LIST)
 
-    def test_form_fields_list_with_missing_mandatory_field(self):
+    def test_form_fields_with_missing_mandatory_field(self):
         """
         Test that the proper exception is raised when trying
         to build a fields list with a missing mandatory field.
         """
-        del self.order_data['amount']
-        scaffold = Scaffold(self.order_data)
+        new_order_data = ORDER_DATA.copy()
+        del new_order_data['amount']
+
         with self.assertRaises(MissingFieldException):
-            scaffold.get_form_fields_list()
+            self.scaffold.get_form_fields(DUMMY_REQUEST, new_order_data)
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):
@@ -229,11 +211,12 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         the possible meaningful combinations of default and custom HTTP header
         names.
         """
+        facade = Facade()
 
         # With no specified ADYEN_IP_ADDRESS_HTTP_HEADER setting,
         # ensure we fetch the origin IP address in the REMOTE_ADDR
         # HTTP header.
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = facade._get_origin_ip_address(self.request)
         self.assertEqual(ip_address, '127.0.0.1')
         if six.PY3:
             self.assertEqual(type(ip_address), str)
@@ -241,16 +224,17 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # Check the return value is None if we have nothing
         # in the `REMOTE_ADDR` header.
         self.request.META.update({'REMOTE_ADDR': ''})
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = facade._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
         # Check the return value is None if we have no `REMOTE_ADDR`
         # header at all.
         del self.request.META['REMOTE_ADDR']
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = facade._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
         with self.settings(ADYEN_IP_ADDRESS_HTTP_HEADER=TEST_IP_ADDRESS_HTTP_HEADER):
+            facade = Facade()  # Recreate the instance to update the Adyen config.
 
             # Now we add the `HTTP_X_FORWARDED_FOR` header and
             # ensure it is used instead.
@@ -258,21 +242,21 @@ class TestAdyenPaymentResponse(AdyenTestCase):
                 'REMOTE_ADDR': '127.0.0.1',
                 'HTTP_X_FORWARDED_FOR': '93.16.93.168'
             })
-            ip_address = Facade._get_origin_ip_address(self.request)
+            ip_address = facade._get_origin_ip_address(self.request)
             self.assertEqual(ip_address, '93.16.93.168')
             if six.PY3:
                 self.assertEqual(type(ip_address), str)
 
             # Even if the default header is missing.
             del self.request.META['REMOTE_ADDR']
-            ip_address = Facade._get_origin_ip_address(self.request)
+            ip_address = facade._get_origin_ip_address(self.request)
             self.assertEqual(ip_address, '93.16.93.168')
             if six.PY3:
                 self.assertEqual(type(ip_address), str)
 
             # And finally back to `None` if we have neither header.
             del self.request.META['HTTP_X_FORWARDED_FOR']
-            ip_address = Facade._get_origin_ip_address(self.request)
+            ip_address = facade._get_origin_ip_address(self.request)
             self.assertIsNone(ip_address)
 
     def test_handle_authorised_payment(self):
@@ -363,7 +347,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         del self.request.META['REMOTE_ADDR']
 
         # ... double-check that the IP address is, therefore, `None` ...
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = Facade()._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
         # ... and finally make sure everything works as expected.
