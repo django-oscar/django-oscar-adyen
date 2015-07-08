@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-import bleach
-
 from django.utils import timezone
 
 from .facade import Facade
@@ -30,16 +26,6 @@ class Scaffold:
         return get_config().get_action_url(request)
 
     def get_form_fields(self, request, order_data):
-        """ Return the payment form fields, rendered into HTML. """
-
-        fields_list = self.get_form_fields_list(request, order_data)
-        return ''.join([
-            '<input type="%s" name="%s" value="%s">\n' % (
-                f.get('type'), f.get('name'), bleach.clean(f.get('value'))
-            ) for f in fields_list
-        ])
-
-    def get_form_fields_list(self, request, order_data):
         """
         Return the payment form fields as a list of dicts.
         Expects a large-ish order_data dictionary with details of the order.

@@ -142,29 +142,15 @@ class TestAdyenPaymentRequest(AdyenTestCase):
 
     def test_form_fields_ok(self):
         """
-        Test that the payment form fields are properly built.
-        """
-        with freeze_time(TEST_FROZEN_TIME):
-            form_fields = self.scaffold.get_form_fields(DUMMY_REQUEST, ORDER_DATA)
-            for field_spec in EXPECTED_FIELDS_LIST:
-                field = '<input type="%s" name="%s" value="%s">' % (
-                    field_spec.get('type'),
-                    field_spec.get('name'),
-                    field_spec.get('value'),
-                )
-                self.assertIn(field, form_fields)
-
-    def test_form_fields_list_ok(self):
-        """
         Test that the payment form fields list is properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            fields_list = self.scaffold.get_form_fields_list(DUMMY_REQUEST, ORDER_DATA)
+            fields_list = self.scaffold.get_form_fields(DUMMY_REQUEST, ORDER_DATA)
             self.assertEqual(len(fields_list), len(EXPECTED_FIELDS_LIST))
             for field in fields_list:
                 self.assertIn(field, EXPECTED_FIELDS_LIST)
 
-    def test_form_fields_list_with_missing_mandatory_field(self):
+    def test_form_fields_with_missing_mandatory_field(self):
         """
         Test that the proper exception is raised when trying
         to build a fields list with a missing mandatory field.
@@ -173,7 +159,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         del new_order_data['amount']
 
         with self.assertRaises(MissingFieldException):
-            self.scaffold.get_form_fields_list(DUMMY_REQUEST, new_order_data)
+            self.scaffold.get_form_fields(DUMMY_REQUEST, new_order_data)
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):
