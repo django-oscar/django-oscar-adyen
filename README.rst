@@ -44,31 +44,34 @@ Add ``'adyen'`` to ``INSTALLED_APPS`` and run::
 to create the appropriate database tables.
 
 Configuration
--------------
+=============
+
+You have two approaches to configure `django-oscar-adyen`.
+
+Settings-based configuration
+----------------------------
+For simple deployments, setting the required values in the settings will suffice.
 
 Edit your ``settings.py`` to set the following settings:
 
-.. code-block:: python
+* ``ADYEN_IDENTIFIER`` - The identifier of your Adyen account.
+* ``ADYEN_SKIN_CODE`` -  The code for your Adyen skin.
+* ``ADYEN_SECRET_KEY`` - The secret key defined in your Adyen skin.
+* ``ADYEN_ACTION_URL`` -
+  The URL towards which the Adyen form should be POSTed to initiate the payment process
+  (e.g. 'https://test.adyen.com/hpp/select.shtml').
+* ``ADYEN_IP_ADDRESS_HTTP_HEADER`` - Optional. The header in `META` to inspect to determine
+  the IP address of the request. Defaults to `REMOTE_ADDR`.
 
-    ADYEN_IDENTIFIER = 'YourAdyenAccountName'
-    ADYEN_SECRET_KEY = 'YourAdyenSkinSecretKey'
-    ADYEN_ACTION_URL = 'https://test.adyen.com/hpp/select.shtml'
-
-Obviously, you'll need to specify different settings in your test environment
+You will likely need to specify different settings in your test environment
 as opposed to your production environment.
 
-
-Settings
-========
-
-====================== =========================================================
- Setting                Description
----------------------- ---------------------------------------------------------
- ``ADYEN_IDENTIFIER``   The identifier of your Adyen account
- ``ADYEN_SECRET_KEY``   The secret key defined in your Adyen skin
- ``ADYEN_ACTION_URL``   The URL towards which the Adyen form should be POSTed
-                        to initiate the payment process
-====================== =========================================================
+Class-based configuration
+-------------------------
+In more complex deployments, you will want to e.g. alter the Adyen identifier based on
+the request. That is not easily implemented with Django settings, so you can alternatively
+set ``ADYEN_CONFIG_CLASS`` to a config class of your own.
+See `adyen.settings_config.FromSettingsConfig` for an example.
 
 License
 =======

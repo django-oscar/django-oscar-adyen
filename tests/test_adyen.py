@@ -4,8 +4,6 @@ from copy import deepcopy
 import six
 from unittest.mock import Mock
 
-from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -139,11 +137,6 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         """
         action_url = self.scaffold.get_form_action()
         self.assertEqual(action_url, TEST_ACTION_URL)
-
-        # If the setting is missing, a proper exception is raised
-        del settings.ADYEN_ACTION_URL
-        with self.assertRaises(ImproperlyConfigured):
-            self.scaffold.get_form_action()
 
     def test_form_fields_ok(self):
         """
