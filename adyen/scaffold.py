@@ -21,9 +21,12 @@ class Scaffold:
         Constants.PAYMENT_RESULT_REFUSED: PAYMENT_STATUS_REFUSED,
     }
 
+    def __init__(self):
+        self.config = get_config()
+
     def get_form_action(self, request):
         """ Return the URL where the payment form should be submitted. """
-        return get_config().get_action_url(request)
+        return self.config.get_action_url(request)
 
     def get_form_fields(self, request, order_data):
         """
@@ -39,8 +42,8 @@ class Scaffold:
         # Build common field specs
         try:
             field_specs = {
-                Constants.MERCHANT_ACCOUNT: get_config().get_identifier(request),
-                Constants.SKIN_CODE: get_config().get_skin_code(request),
+                Constants.MERCHANT_ACCOUNT: self.config.get_identifier(request),
+                Constants.SKIN_CODE: self.config.get_skin_code(request),
                 Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
                 Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
 

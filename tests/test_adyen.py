@@ -211,11 +211,12 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         the possible meaningful combinations of default and custom HTTP header
         names.
         """
+        facade = Facade()
 
         # With no specified ADYEN_IP_ADDRESS_HTTP_HEADER setting,
         # ensure we fetch the origin IP address in the REMOTE_ADDR
         # HTTP header.
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = facade._get_origin_ip_address(self.request)
         self.assertEqual(ip_address, '127.0.0.1')
         if six.PY3:
             self.assertEqual(type(ip_address), str)
@@ -223,16 +224,17 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # Check the return value is None if we have nothing
         # in the `REMOTE_ADDR` header.
         self.request.META.update({'REMOTE_ADDR': ''})
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = facade._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
         # Check the return value is None if we have no `REMOTE_ADDR`
         # header at all.
         del self.request.META['REMOTE_ADDR']
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = facade._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
         with self.settings(ADYEN_IP_ADDRESS_HTTP_HEADER=TEST_IP_ADDRESS_HTTP_HEADER):
+            facade = Facade()  # Recreate the instance to update the Adyen config.
 
             # Now we add the `HTTP_X_FORWARDED_FOR` header and
             # ensure it is used instead.
@@ -240,21 +242,21 @@ class TestAdyenPaymentResponse(AdyenTestCase):
                 'REMOTE_ADDR': '127.0.0.1',
                 'HTTP_X_FORWARDED_FOR': '93.16.93.168'
             })
-            ip_address = Facade._get_origin_ip_address(self.request)
+            ip_address = facade._get_origin_ip_address(self.request)
             self.assertEqual(ip_address, '93.16.93.168')
             if six.PY3:
                 self.assertEqual(type(ip_address), str)
 
             # Even if the default header is missing.
             del self.request.META['REMOTE_ADDR']
-            ip_address = Facade._get_origin_ip_address(self.request)
+            ip_address = facade._get_origin_ip_address(self.request)
             self.assertEqual(ip_address, '93.16.93.168')
             if six.PY3:
                 self.assertEqual(type(ip_address), str)
 
             # And finally back to `None` if we have neither header.
             del self.request.META['HTTP_X_FORWARDED_FOR']
-            ip_address = Facade._get_origin_ip_address(self.request)
+            ip_address = facade._get_origin_ip_address(self.request)
             self.assertIsNone(ip_address)
 
     def test_handle_authorised_payment(self):
@@ -345,7 +347,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         del self.request.META['REMOTE_ADDR']
 
         # ... double-check that the IP address is, therefore, `None` ...
-        ip_address = Facade._get_origin_ip_address(self.request)
+        ip_address = Facade()._get_origin_ip_address(self.request)
         self.assertIsNone(ip_address)
 
         # ... and finally make sure everything works as expected.

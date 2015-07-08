@@ -4,6 +4,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
+# We use get_config() instead of adyen_config because throughout
+# the tests, we repeatedly change the Django settings.
 from adyen.config import get_config, AbstractAdyenConfig
 
 

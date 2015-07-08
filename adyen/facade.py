@@ -11,22 +11,25 @@ from .config import get_config
 
 logger = logging.getLogger('adyen')
 
-def get_gateway(request):
+def get_gateway(request, config):
     return Gateway({
-        Constants.IDENTIFIER: get_config().get_identifier(request),
-        Constants.SECRET_KEY: get_config().get_skin_secret(request),
-        Constants.ACTION_URL: get_config().get_action_url(request),
+        Constants.IDENTIFIER: config.get_identifier(request),
+        Constants.SECRET_KEY: config.get_skin_secret(request),
+        Constants.ACTION_URL: config.get_action_url(request),
     })
 
 
 class Facade:
+
+    def __init__(self):
+        self.config = get_config()
 
     def build_payment_form_fields(self, request, params):
         """
         Return a dict containing the name and value of all the hidden fields
         necessary to build the form that will be POSTed to Adyen.
         """
-        return get_gateway(request).build_payment_form_fields(params)
+        return get_gateway(request, self.config).build_payment_form_fields(params)
 
     @classmethod
     def _is_valid_ip_address(cls, s):
@@ -37,8 +40,7 @@ class Facade:
         """
         return iptools.ipv4.validate_ip(s) or iptools.ipv6.validate_ip(s)
 
-    @classmethod
-    def _get_origin_ip_address(cls, request):
+    def _get_origin_ip_address(self, request):
         """
         Return the IP address where the payment originated from or None if
         we are unable to get it -- which *will* happen if we received a
@@ -52,14 +54,14 @@ class Facade:
         Django setting. We fallback on the canonical `REMOTE_ADDR`, used for
         regular, unproxied requests.
         """
-        ip_address_http_header = get_config().get_ip_address_header()
+        ip_address_http_header = self.config.get_ip_address_header()
 
         try:
             ip_address = request.META[ip_address_http_header]
         except KeyError:
             return None
 
-        if not cls._is_valid_ip_address(ip_address):
+        if not self._is_valid_ip_address(ip_address):
             logger.warn("%s is not a valid IP address", ip_address)
             return None
 
@@ -153,7 +155,7 @@ class Facade:
             raise RuntimeError("Only GET and POST requests are supported.")
 
         # Then we can instantiate the appropriate class from the gateway.
-        gateway = get_gateway(request)
+        gateway = get_gateway(request, self.config)
         response = response_class(gateway, params)
 
         # Note that this may raise an exception if the response is invalid.
@@ -201,7 +203,7 @@ class Facade:
         # - On the other hand we have the `live` POST parameter, which lets
         # us know which Adyen platform fired this request.
         current_platform = (Constants.LIVE
-                            if Constants.LIVE in get_config().get_action_url(request)
+                            if Constants.LIVE in self.config.get_action_url(request)
                             else Constants.TEST)
 
         origin_platform = (Constants.LIVE
