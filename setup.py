@@ -16,8 +16,7 @@ setup(
     name='django-oscar-adyen',
     version='0.2.6',
     url='https://github.com/oscaro/django-oscar-adyen',
-    author='Mathieu Richardoz',
-    author_email='mr@babik.fr',
+    author='Oscaro',
     description='Adyen payment module for django-oscar',
     long_description=open('README.rst').read(),
     keywords='payment, django, oscar, adyen',
@@ -25,7 +24,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'django-oscar>=0.7',
         'iptools==0.6.1',
         'requests>=2.0,<3.0',
     ],
