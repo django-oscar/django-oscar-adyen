@@ -24,16 +24,16 @@ class FromSettingsConfig(AbstractAdyenConfig):
                 "You are using the FromSettingsConfig config class, but haven't set the "
                 "the following required settings: %s" % missing_settings)
 
-    def get_identifier(self):
+    def get_identifier(self, request):
         return settings.ADYEN_IDENTIFIER
 
-    def get_action_url(self):
+    def get_action_url(self, request):
         return settings.ADYEN_ACTION_URL
 
-    def get_skin_code(self):
+    def get_skin_code(self, request):
         return settings.ADYEN_SKIN_CODE
 
-    def get_skin_secret(self):
+    def get_skin_secret(self, request):
         return settings.ADYEN_SECRET_KEY
 
     def get_ip_address_header(self):

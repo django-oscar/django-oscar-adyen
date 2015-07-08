@@ -19,16 +19,16 @@ class AbstractAdyenConfig:
     The base implementation for a config class.
     """
 
-    def get_identifier(self):
+    def get_identifier(self, request):
         raise NotImplementedError
 
-    def get_action_url(self):
+    def get_action_url(self, request):
         raise NotImplementedError
 
-    def get_skin_code(self):
+    def get_skin_code(self, request):
         raise NotImplementedError
 
-    def get_skin_secret(self):
+    def get_skin_secret(self, request):
         raise NotImplementedError
 
     def get_ip_address_header(self):

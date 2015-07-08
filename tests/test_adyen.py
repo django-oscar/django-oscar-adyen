@@ -100,6 +100,8 @@ TAMPERED_PAYMENT_PARAMS = {
     'skinCode': '4d72uQqA',
 }
 
+DUMMY_REQUEST = None
+
 
 @override_settings(
     ADYEN_IDENTIFIER=TEST_IDENTIFIER,
@@ -135,7 +137,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         """
         Test that the form action is properly fetched from the settings.
         """
-        action_url = self.scaffold.get_form_action()
+        action_url = self.scaffold.get_form_action(DUMMY_REQUEST)
         self.assertEqual(action_url, TEST_ACTION_URL)
 
     def test_form_fields_ok(self):
@@ -143,7 +145,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         Test that the payment form fields are properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            form_fields = self.scaffold.get_form_fields()
+            form_fields = self.scaffold.get_form_fields(DUMMY_REQUEST)
             for field_spec in EXPECTED_FIELDS_LIST:
                 field = '<input type="%s" name="%s" value="%s">' % (
                     field_spec.get('type'),
@@ -157,7 +159,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         Test that the payment form fields list is properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            fields_list = self.scaffold.get_form_fields_list()
+            fields_list = self.scaffold.get_form_fields_list(DUMMY_REQUEST)
             self.assertEqual(len(fields_list), len(EXPECTED_FIELDS_LIST))
             for field in fields_list:
                 self.assertIn(field, EXPECTED_FIELDS_LIST)
@@ -170,7 +172,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         del self.order_data['amount']
         scaffold = Scaffold(self.order_data)
         with self.assertRaises(MissingFieldException):
-            scaffold.get_form_fields_list()
+            scaffold.get_form_fields_list(DUMMY_REQUEST)
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):

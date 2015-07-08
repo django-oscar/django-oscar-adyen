@@ -11,24 +11,22 @@ from .config import get_config
 
 logger = logging.getLogger('adyen')
 
+def get_gateway(request):
+    return Gateway({
+        Constants.IDENTIFIER: get_config().get_identifier(request),
+        Constants.SECRET_KEY: get_config().get_skin_secret(request),
+        Constants.ACTION_URL: get_config().get_action_url(request),
+    })
 
-class Facade():
 
-    def __init__(self, **kwargs):
-        init_params = {
-            Constants.IDENTIFIER: get_config().get_identifier(),
-            Constants.SECRET_KEY: get_config().get_skin_secret(),
-            Constants.ACTION_URL: get_config().get_action_url(),
-        }
-        # Initialize the gateway.
-        self.gateway = Gateway(init_params)
+class Facade:
 
-    def build_payment_form_fields(self, params):
+    def build_payment_form_fields(self, request, params):
         """
         Return a dict containing the name and value of all the hidden fields
         necessary to build the form that will be POSTed to Adyen.
         """
-        return self.gateway.build_payment_form_fields(params)
+        return get_gateway(request).build_payment_form_fields(params)
 
     @classmethod
     def _is_valid_ip_address(cls, s):
@@ -143,11 +141,7 @@ class Facade():
         Validate, process, optionally record audit trail and provide feedback
         about the current payment response.
         """
-        success, output_data = False, {}
-
         # We must first find out whether this is a redirection or a notification.
-        client = self.gateway
-        params = response_class = None
 
         if request.method == 'GET':
             params = request.GET
@@ -159,7 +153,8 @@ class Facade():
             raise RuntimeError("Only GET and POST requests are supported.")
 
         # Then we can instantiate the appropriate class from the gateway.
-        response = response_class(client, params)
+        gateway = get_gateway(request)
+        response = response_class(gateway, params)
 
         # Note that this may raise an exception if the response is invalid.
         # For example: MissingFieldException, UnexpectedFieldException, ...
@@ -206,7 +201,7 @@ class Facade():
         # - On the other hand we have the `live` POST parameter, which lets
         # us know which Adyen platform fired this request.
         current_platform = (Constants.LIVE
-                            if Constants.LIVE in get_config().get_action_url()
+                            if Constants.LIVE in get_config().get_action_url(request)
                             else Constants.TEST)
 
         origin_platform = (Constants.LIVE

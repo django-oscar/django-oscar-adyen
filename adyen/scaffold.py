@@ -9,7 +9,7 @@ from .gateway import Constants, MissingFieldException
 from .config import get_config
 
 
-class Scaffold():
+class Scaffold:
 
     # These are the constants that all scaffolds are expected to return
     # to a multi-psp application. They might look like those actually returned
@@ -26,28 +26,31 @@ class Scaffold():
     }
 
     def __init__(self, order_data=None):
-        self.facade = Facade()
+        # This is an anti-pattern. We require passing in additional data
+        # when the Scaffold is initialized (instead of when calling the methods that
+        # might require that data). get_form_fields_list especially relies on this.
+        # This makes the code very Oscaro-specific.
         try:
             for name, value in order_data.items():
                 setattr(self, name, value)
         except AttributeError:
             pass
 
-    def get_form_action(self):
+    def get_form_action(self, request):
         """ Return the URL where the payment form should be submitted. """
-        return get_config().get_action_url()
+        return get_config().get_action_url(request)
 
-    def get_form_fields(self):
+    def get_form_fields(self, request):
         """ Return the payment form fields, rendered into HTML. """
 
-        fields_list = self.get_form_fields_list()
+        fields_list = self.get_form_fields_list(request)
         return ''.join([
             '<input type="%s" name="%s" value="%s">\n' % (
                 f.get('type'), f.get('name'), bleach.clean(f.get('value'))
             ) for f in fields_list
         ])
 
-    def get_form_fields_list(self):
+    def get_form_fields_list(self, request):
         """
         Return the payment form fields as a list of dicts.
         """
@@ -60,21 +63,21 @@ class Scaffold():
         # Build common field specs
         try:
             field_specs = {
-                Constants.MERCHANT_ACCOUNT: get_config().get_identifier(),
+                Constants.MERCHANT_ACCOUNT: get_config().get_identifier(request),
+                Constants.SKIN_CODE: get_config().get_skin_code(request),
+                Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
+                Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
+
+                # The following values must be passed in via order_data in __init__().
                 Constants.MERCHANT_REFERENCE: str(self.order_number),
                 Constants.SHOPPER_REFERENCE: self.client_id,
                 Constants.SHOPPER_EMAIL: self.client_email,
                 Constants.CURRENCY_CODE: self.currency_code,
                 Constants.PAYMENT_AMOUNT: self.amount,
-                Constants.SKIN_CODE: get_config().get_skin_code(),
-                Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
-                Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
                 Constants.SHOPPER_LOCALE: self.shopper_locale,
                 Constants.COUNTRY_CODE: self.country_code,
-
-                # Adyen does not provide the payment amount in the
-                # return URL, so we store it in this field to
-                # avoid a database query to get it back then.
+                # Adyen does not provide the payment amount in the return URL, so we store it in
+                # this field to avoid a database query to get it back then.
                 Constants.MERCHANT_RETURN_DATA: self.amount,
 
             }
@@ -88,7 +91,7 @@ class Scaffold():
             return_url = return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
             field_specs[Constants.MERCHANT_RETURN_URL] = return_url
 
-        return self.facade.build_payment_form_fields(field_specs)
+        return Facade().build_payment_form_fields(request, field_specs)
 
     def _normalize_feedback(self, feedback):
         """
@@ -101,16 +104,14 @@ class Scaffold():
 
     def handle_payment_feedback(self, request):
         return self._normalize_feedback(
-            self.facade.handle_payment_feedback(
-                request, record_audit_trail=True))
+            Facade().handle_payment_feedback(request, record_audit_trail=True))
 
     def check_payment_outcome(self, request):
         return self._normalize_feedback(
-            self.facade.handle_payment_feedback(
-                request, record_audit_trail=False))
+            Facade().handle_payment_feedback(request, record_audit_trail=False))
 
     def assess_notification_relevance(self, request):
-        return self.facade.assess_notification_relevance(request)
+        return Facade().assess_notification_relevance(request)
 
     def build_notification_response(self, request):
-        return self.facade.build_notification_response(request)
+        return Facade().build_notification_response(request)

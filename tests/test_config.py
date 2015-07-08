@@ -4,7 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from adyen.config import get_config
+from adyen.config import get_config, AbstractAdyenConfig
 
 
 @override_settings(
@@ -23,7 +23,7 @@ class FromSettingsTestCase(TestCase):
         assert 'FromSettingsConfig' in get_config().__class__.__name__
 
     def test_value_passing_works(self):
-        assert get_config().get_action_url() == 'foo'
+        assert get_config().get_action_url(None) == 'foo'
 
     # https://docs.djangoproject.com/en/1.8/topics/testing/tools/#django.test.modify_settings
     # Override settings is needed to let us delete settings on a per-test basis.
@@ -35,9 +35,9 @@ class FromSettingsTestCase(TestCase):
             get_config()
 
 
-class DummyConfigClass:
+class DummyConfigClass(AbstractAdyenConfig):
 
-    def get_action_url(self):
+    def get_action_url(self, request):
         return 'foo'
 
 
@@ -56,6 +56,6 @@ class CustomConfigClassTestCase(TestCase):
         """
         Check that we indeed ignore Django settings (apart from the config class).
         """
-        assert get_config().get_action_url() == 'foo'
+        assert get_config().get_action_url(None) == 'foo'
 
 
