@@ -14,7 +14,7 @@ if os.environ.get('USER', '') == 'vagrant':
 setup(
 
     name='django-oscar-adyen',
-    version='0.2.6',
+    version='0.3.0',
     url='https://github.com/oscaro/django-oscar-adyen',
     author='Oscaro',
     description='Adyen payment module for django-oscar',
