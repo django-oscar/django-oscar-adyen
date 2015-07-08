@@ -25,34 +25,24 @@ class Scaffold:
         Constants.PAYMENT_RESULT_REFUSED: PAYMENT_STATUS_REFUSED,
     }
 
-    def __init__(self, order_data=None):
-        # This is an anti-pattern. We require passing in additional data
-        # when the Scaffold is initialized (instead of when calling the methods that
-        # might require that data). get_form_fields_list especially relies on this.
-        # This makes the code very Oscaro-specific.
-        try:
-            for name, value in order_data.items():
-                setattr(self, name, value)
-        except AttributeError:
-            pass
-
     def get_form_action(self, request):
         """ Return the URL where the payment form should be submitted. """
         return get_config().get_action_url(request)
 
-    def get_form_fields(self, request):
+    def get_form_fields(self, request, order_data):
         """ Return the payment form fields, rendered into HTML. """
 
-        fields_list = self.get_form_fields_list(request)
+        fields_list = self.get_form_fields_list(request, order_data)
         return ''.join([
             '<input type="%s" name="%s" value="%s">\n' % (
                 f.get('type'), f.get('name'), bleach.clean(f.get('value'))
             ) for f in fields_list
         ])
 
-    def get_form_fields_list(self, request):
+    def get_form_fields_list(self, request, order_data):
         """
         Return the payment form fields as a list of dicts.
+        Expects a large-ish order_data dictionary with details of the order.
         """
         now = timezone.now()
         session_validity = now + timezone.timedelta(minutes=20)
@@ -68,25 +58,23 @@ class Scaffold:
                 Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
                 Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
 
-                # The following values must be passed in via order_data in __init__().
-                Constants.MERCHANT_REFERENCE: str(self.order_number),
-                Constants.SHOPPER_REFERENCE: self.client_id,
-                Constants.SHOPPER_EMAIL: self.client_email,
-                Constants.CURRENCY_CODE: self.currency_code,
-                Constants.PAYMENT_AMOUNT: self.amount,
-                Constants.SHOPPER_LOCALE: self.shopper_locale,
-                Constants.COUNTRY_CODE: self.country_code,
+                Constants.MERCHANT_REFERENCE: str(order_data['order_number']),
+                Constants.SHOPPER_REFERENCE: order_data['client_id'],
+                Constants.SHOPPER_EMAIL: order_data['client_email'],
+                Constants.CURRENCY_CODE: order_data['currency_code'],
+                Constants.PAYMENT_AMOUNT: order_data['amount'],
+                Constants.SHOPPER_LOCALE: order_data['shopper_locale'],
+                Constants.COUNTRY_CODE: order_data['country_code'],
                 # Adyen does not provide the payment amount in the return URL, so we store it in
                 # this field to avoid a database query to get it back then.
-                Constants.MERCHANT_RETURN_DATA: self.amount,
-
+                Constants.MERCHANT_RETURN_DATA: order_data['amount'],
             }
 
-        except AttributeError:
-            raise MissingFieldException
+        except KeyError:
+            raise MissingFieldException("One or more fields are missing from the order data.")
 
         # Check for overridden return URL.
-        return_url = getattr(self, 'return_url', None)
+        return_url = order_data.get('return_url', None)
         if return_url is not None:
             return_url = return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
             field_specs[Constants.MERCHANT_RETURN_URL] = return_url

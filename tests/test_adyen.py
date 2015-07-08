@@ -100,6 +100,20 @@ TAMPERED_PAYMENT_PARAMS = {
     'skinCode': '4d72uQqA',
 }
 
+ORDER_DATA = {
+    'amount': 123,
+    'basket_id': 456,
+    'client_email': 'test@example.com',
+    'client_id': 789,
+    'currency_code': 'EUR',
+    'country_code': 'fr',
+    'description': 'Order #123',
+    'order_id': 'ORD-123',
+    'order_number': '00000000123',
+    'return_url': TEST_RETURN_URL,
+    'shopper_locale': 'fr',
+}
+
 DUMMY_REQUEST = None
 
 
@@ -113,21 +127,7 @@ class AdyenTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-
-        self.order_data = {
-            'amount': 123,
-            'basket_id': 456,
-            'client_email': 'test@example.com',
-            'client_id': 789,
-            'currency_code': 'EUR',
-            'country_code': 'fr',
-            'description': 'Order #123',
-            'order_id': 'ORD-123',
-            'order_number': '00000000123',
-            'return_url': TEST_RETURN_URL,
-            'shopper_locale': 'fr',
-        }
-        self.scaffold = Scaffold(self.order_data)
+        self.scaffold = Scaffold()
 
 
 class TestAdyenPaymentRequest(AdyenTestCase):
@@ -145,7 +145,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         Test that the payment form fields are properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            form_fields = self.scaffold.get_form_fields(DUMMY_REQUEST)
+            form_fields = self.scaffold.get_form_fields(DUMMY_REQUEST, ORDER_DATA)
             for field_spec in EXPECTED_FIELDS_LIST:
                 field = '<input type="%s" name="%s" value="%s">' % (
                     field_spec.get('type'),
@@ -159,7 +159,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         Test that the payment form fields list is properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            fields_list = self.scaffold.get_form_fields_list(DUMMY_REQUEST)
+            fields_list = self.scaffold.get_form_fields_list(DUMMY_REQUEST, ORDER_DATA)
             self.assertEqual(len(fields_list), len(EXPECTED_FIELDS_LIST))
             for field in fields_list:
                 self.assertIn(field, EXPECTED_FIELDS_LIST)
@@ -169,10 +169,11 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         Test that the proper exception is raised when trying
         to build a fields list with a missing mandatory field.
         """
-        del self.order_data['amount']
-        scaffold = Scaffold(self.order_data)
+        new_order_data = ORDER_DATA.copy()
+        del new_order_data['amount']
+
         with self.assertRaises(MissingFieldException):
-            scaffold.get_form_fields_list(DUMMY_REQUEST)
+            self.scaffold.get_form_fields_list(DUMMY_REQUEST, new_order_data)
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):
