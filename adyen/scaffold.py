@@ -83,10 +83,6 @@ class Scaffold:
         return self._normalize_feedback(
             Facade().handle_payment_feedback(request, record_audit_trail=True))
 
-    def check_payment_outcome(self, request):
-        return self._normalize_feedback(
-            Facade().handle_payment_feedback(request, record_audit_trail=False))
-
     def assess_notification_relevance(self, request):
         return Facade().assess_notification_relevance(request)
 
