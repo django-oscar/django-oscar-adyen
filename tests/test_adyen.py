@@ -261,26 +261,6 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
     def test_handle_authorised_payment(self):
 
-        # Before the test, there are no recorded transactions in the database.
-        num_recorded_transactions = AdyenTransaction.objects.all().count()
-        self.assertEqual(num_recorded_transactions, 0)
-
-        self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
-        success, status, details = self.scaffold.check_payment_outcome(self.request)
-
-        self.assertTrue(success)
-        self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
-        self.assertEqual(details.get('amount'), 13894)
-        self.assertEqual(details.get('ip_address'), '127.0.0.1')
-        self.assertEqual(details.get('method'), 'adyen')
-        self.assertEqual(details.get('psp_reference'), '8814136447235922')
-        self.assertEqual(details.get('status'), 'AUTHORISED')
-
-        # After calling `check_payment_outcome`, there are still no recorded
-        # transactions in the database.
-        num_recorded_transactions = AdyenTransaction.objects.all().count()
-        self.assertEqual(num_recorded_transactions, 0)
-
         self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
         success, status, details = self.scaffold.handle_payment_feedback(self.request)
 
@@ -441,3 +421,22 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.request.POST['eventCode'] = 'REPORT_AVAILABLE'
         must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
         self.assertTupleEqual((must_process, must_ack), (False, True))
+
+    def test_assert_duplicate_notifications(self):
+        """
+        This test tests that duplicate notifications are ignored.
+        """
+        self.request.method = 'POST'
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
+
+        # We have a valid request. So let's confirm that we think we should process
+        # and acknowledge it.
+        assert (True, True) == self.scaffold.assess_notification_relevance(self.request)
+
+        # Let's process it then.
+        __, __, __ = self.scaffold.handle_payment_feedback(self.request)
+
+        # As we have already processed that request, we now shouldn't process the request
+        # any more. But we still acknowledge it.
+        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
+

@@ -138,7 +138,7 @@ class Facade:
 
                 pass
 
-    def handle_payment_feedback(self, request, record_audit_trail):
+    def handle_payment_feedback(self, request):
         """
         Validate, process, optionally record audit trail and provide feedback
         about the current payment response.
@@ -167,9 +167,8 @@ class Facade:
         success, status, details = response.process()
         txn_details = self._unpack_details(details)
 
-        # ... and record the audit trail if instructed to...
-        if record_audit_trail:
-            self._record_audit_trail(request, status, txn_details)
+        # ... and record the audit trail.
+        self._record_audit_trail(request, status, txn_details)
 
         # ... prepare the feedback data...
         output_data = {
@@ -218,6 +217,17 @@ class Facade:
         # However, we should probably acknowledge all those notifications so
         # Adyen doesn't keep sending them forever and ever.
         if request.POST.get(Constants.EVENT_CODE) != Constants.EVENT_CODE_AUTHORISATION:
+            return False, True
+
+        # Adyen duplicates many notifications. This bit makes sure we ignore them.
+        # "Duplicate notifications have the same corresponding values for their eventCode and
+        # pspReference fields."  https://docs.adyen.com/display/TD/Accept+notifications
+        reference = request.POST[Constants.PSP_REFERENCE]
+        # The event code gets checked above, so we only need to check for the reference now.
+        if AdyenTransaction.objects.filter(reference=reference).exists():
+            # We already stored a transaction with this reference, so we can ignore the
+            # notification. As above, we still acknowledge it to Adyen, in case it missed
+            # our previous acknowledgment.
             return False, True
 
         # Seems legit, just do it :)
