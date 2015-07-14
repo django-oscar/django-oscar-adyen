@@ -421,3 +421,22 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.request.POST['eventCode'] = 'REPORT_AVAILABLE'
         must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
         self.assertTupleEqual((must_process, must_ack), (False, True))
+
+    def test_assert_duplicate_notifications(self):
+        """
+        This test tests that duplicate notifications are ignored.
+        """
+        self.request.method = 'POST'
+        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
+
+        # We have a valid request. So let's confirm that we think we should process
+        # and acknowledge it.
+        assert (True, True) == self.scaffold.assess_notification_relevance(self.request)
+
+        # Let's process it then.
+        __, __, __ = self.scaffold.handle_payment_feedback(self.request)
+
+        # As we have already processed that request, we now shouldn't process the request
+        # any more. But we still acknowledge it.
+        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
+

@@ -219,6 +219,17 @@ class Facade:
         if request.POST.get(Constants.EVENT_CODE) != Constants.EVENT_CODE_AUTHORISATION:
             return False, True
 
+        # Adyen duplicates many notifications. This bit makes sure we ignore them.
+        # "Duplicate notifications have the same corresponding values for their eventCode and
+        # pspReference fields."  https://docs.adyen.com/display/TD/Accept+notifications
+        reference = request.POST[Constants.PSP_REFERENCE]
+        # The event code gets checked above, so we only need to check for the reference now.
+        if AdyenTransaction.objects.filter(reference=reference).exists():
+            # We already stored a transaction with this reference, so we can ignore the
+            # notification. As above, we still acknowledge it to Adyen, in case it missed
+            # our previous acknowledgment.
+            return False, True
+
         # Seems legit, just do it :)
         return True, True
 
