@@ -73,6 +73,22 @@ the request. That is not easily implemented with Django settings, so you can alt
 set ``ADYEN_CONFIG_CLASS`` to a config class of your own.
 See `adyen.settings_config.FromSettingsConfig` for an example.
 
+Changes
+=======
+
+0.4.0 - released July 14th, 2015
+--------------------------------
+
+- change scaffold interface (https://github.com/oscaro/django-oscar-adyen/pull/16)
+- ignore duplicate Adyen notifications (https://github.com/oscaro/django-oscar-adyen/pull/16)
+
+0.3.0 - released July 8th, 2015
+-------------------------------
+
+- Django 1.8 and Oscar 1.1 support (#https://github.com/oscaro/django-oscar-adyen/pull/15)
+- introduce config classes for dynamic configuration (https://github.com/oscaro/django-oscar-adyen/pull/14)
+
+
 License
 =======
 
