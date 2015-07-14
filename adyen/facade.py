@@ -138,7 +138,7 @@ class Facade:
 
                 pass
 
-    def handle_payment_feedback(self, request, record_audit_trail):
+    def handle_payment_feedback(self, request):
         """
         Validate, process, optionally record audit trail and provide feedback
         about the current payment response.
@@ -167,9 +167,8 @@ class Facade:
         success, status, details = response.process()
         txn_details = self._unpack_details(details)
 
-        # ... and record the audit trail if instructed to...
-        if record_audit_trail:
-            self._record_audit_trail(request, status, txn_details)
+        # ... and record the audit trail.
+        self._record_audit_trail(request, status, txn_details)
 
         # ... prepare the feedback data...
         output_data = {

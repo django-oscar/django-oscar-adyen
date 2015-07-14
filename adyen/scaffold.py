@@ -80,8 +80,7 @@ class Scaffold:
         return success, common_status, details
 
     def handle_payment_feedback(self, request):
-        return self._normalize_feedback(
-            Facade().handle_payment_feedback(request, record_audit_trail=True))
+        return self._normalize_feedback(Facade().handle_payment_feedback(request))
 
     def assess_notification_relevance(self, request):
         return Facade().assess_notification_relevance(request)
