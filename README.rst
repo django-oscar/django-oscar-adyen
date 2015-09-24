@@ -76,9 +76,10 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 Changes
 =======
 
-0.4.1 - unreleased
-------------------
+0.4.1 - released September 24, 2015
+-----------------------------------
 - ignore additional data sent by Adyen's new-style system communications
+  (https://github.com/oscaro/django-oscar-adyen/pull/17)
 
 0.4.0 - released July 14th, 2015
 --------------------------------
