@@ -9,7 +9,8 @@ from django.test.utils import override_settings
 
 from freezegun import freeze_time
 
-from adyen.gateway import MissingFieldException, InvalidTransactionException
+from adyen.gateway import MissingFieldException, InvalidTransactionException, PaymentNotification, \
+    Constants, UnexpectedFieldException
 from adyen.models import AdyenTransaction
 from adyen.scaffold import Scaffold
 from adyen.facade import Facade
@@ -440,3 +441,47 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # any more. But we still acknowledge it.
         assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
 
+
+class MockClient:
+    secret_key = None
+
+
+class PaymentNotificationTestCase(TestCase):
+
+    def create_mock_notification(self, required=True, optional=False, additional=False):
+        keys_to_set = []
+        if required:
+            keys_to_set += PaymentNotification.REQUIRED_FIELDS
+        if optional:
+            keys_to_set += PaymentNotification.OPTIONAL_FIELDS
+        if additional:
+            keys_to_set += [Constants.ADDITIONAL_DATA_PREFIX + 'foo']
+        params = {key: 'FOO' for key in keys_to_set}
+
+        return PaymentNotification(MockClient(), params)
+
+    def test_required_fields_are_required(self):
+        notification = self.create_mock_notification(
+            required=False, optional=True, additional=True)
+        with self.assertRaises(MissingFieldException):
+            notification.check_fields()
+
+    def test_unknown_fields_cause_exception(self):
+        notification = self.create_mock_notification(
+            required=True, optional=False, additional=False)
+        notification.params['UNKNOWN_FIELD'] = 'foo'
+
+        with self.assertRaises(UnexpectedFieldException):
+            notification.check_fields()
+
+    def test_optional_fields_are_optional(self):
+        notification = self.create_mock_notification(
+            required=True, optional=False, additional=False)
+
+        notification.check_fields()
+
+    def test_additional_fields_are_ignored(self):
+        notification = self.create_mock_notification(
+            required=True, optional=False, additional=True)
+
+        notification.check_fields()

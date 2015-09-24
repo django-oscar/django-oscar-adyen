@@ -60,6 +60,7 @@ class Constants:
     SESSION_VALIDITY = 'sessionValidity'
     SKIN_CODE = 'skinCode'
     SHIP_BEFORE_DATE = 'shipBeforeDate'
+    ADDITIONAL_DATA_PREFIX = 'additionalData.'
 
     SHOPPER_EMAIL = 'shopperEmail'
     SHOPPER_LOCALE = 'shopperLocale'
@@ -313,6 +314,16 @@ class BaseResponse(BaseInteraction):
 
 
 class PaymentNotification(BaseResponse):
+    """
+    Class used to process payment notifications (HTTPS POST from Adyen to our servers).
+
+    Payment notifications can have multiple fields. They fall into four categories:
+    - required: Must be included.
+    - optional: Can be included.
+    - additional data: Can be included. Format is 'additionalData.VALUE' and we don't need the
+                       data at the moment, so it's ignored.
+    - unexpected: We loudly complain.
+    """
     REQUIRED_FIELDS = (
         Constants.CURRENCY,
         Constants.EVENT_CODE,
@@ -330,6 +341,25 @@ class PaymentNotification(BaseResponse):
         Constants.OPERATIONS,
         Constants.ORIGINAL_REFERENCE,
     )
+
+    def check_fields(self):
+        """
+        Delete unneeded additional data before validating.
+
+        Adyen's payment notification can come with additional data.
+        It can mostly be turned on and off in the notifications settings,
+        but some bits always seem to be delivered with the new
+        "System communication" setup (instead of the old "notifications" tab
+        in the settings).
+        We currently don't need any of that data, so we just drop it
+        before validating the response.
+        :return:
+        """
+        self.params = {
+            key: self.params[key]
+            for key in self.params if Constants.ADDITIONAL_DATA_PREFIX not in key
+        }
+        super().check_fields()
 
     def process(self):
         payment_result = self.params.get(Constants.SUCCESS, None)

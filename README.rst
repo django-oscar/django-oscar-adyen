@@ -76,6 +76,10 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 Changes
 =======
 
+0.4.1 - unreleased
+------------------
+- ignore additional data sent by Adyen's new-style system communications
+
 0.4.0 - released July 14th, 2015
 --------------------------------
 
