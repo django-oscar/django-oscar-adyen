@@ -164,6 +164,9 @@ class TestAdyenPaymentRequest(AdyenTestCase):
 
 
 class TestAdyenPaymentResponse(AdyenTestCase):
+    """
+    Test case that tests Adyen payment responses (user redirected from Adyen to us)
+    """
 
     def setUp(self):
         super().setUp()
@@ -396,40 +399,55 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
-    def test_assess_notification_relevance(self):
 
-        self.request.method = 'POST'
+class TestAdyenPaymentNotification(AdyenTestCase):
+    """
+    Test case that tests Adyen payment notifications (Adyen servers POST'ing to us)
+    """
 
-        # If this is an `AUTHORISATION` request targeting the proper platform,
-        # we should both process and acknowledge it.
-        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
-        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
-        self.assertTupleEqual((must_process, must_ack), (True, True))
+    def setUp(self):
+        super().setUp()
+        request = Mock()
+        request.method = 'POST'
+        # Most tests use unproxied requests, the case of proxied ones
+        # is unit-tested by the `test_get_origin_ip_address` method.
+        request.META = {'REMOTE_ADDR': '127.0.0.1'}
+        request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
+        self.request = request
 
-        # If there is a mismatch between the request origin and target platforms,
-        # we should just let it be.
+    def test_valid_request(self):
+        """
+        If this is an `AUTHORISATION` request targeting the proper platform,
+        we should both process and acknowledge it. This test is needed
+        as a base assumption for the tests below.
+        """
+        assert (True, True) == self.scaffold.assess_notification_relevance(self.request)
+
+    def test_platform_mismatch_live_notification(self):
+        """
+        If there is a mismatch between the request origin and target platforms,
+        we should just let it be.
+        """
         self.request.POST['live'] = 'true'
-        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
-        self.assertTupleEqual((must_process, must_ack), (False, False))
+        assert (False, False) == self.scaffold.assess_notification_relevance(self.request)
 
+    def test_platform_mismatch_live_server(self):
         self.request.POST['live'] = 'false'
         with self.settings(ADYEN_ACTION_URL='https://live.adyen.com/hpp/select.shtml'):
-            must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
-            self.assertTupleEqual((must_process, must_ack), (False, False))
+            assert (False, False) == self.scaffold.assess_notification_relevance(self.request)
 
-        # If this is not an `AUTHORISATION` request, we should acknowledge it
-        # but not try to process it.
-        self.request.POST['eventCode'] = 'REPORT_AVAILABLE'
-        must_process, must_ack = self.scaffold.assess_notification_relevance(self.request)
-        self.assertTupleEqual((must_process, must_ack), (False, True))
+    def test_non_authorisation(self):
+        """
+        If this is not an `AUTHORISATION` request, we should acknowledge it
+        but not try to process it.
+        """
+        self.request.POST[Constants.EVENT_CODE] = 'REPORT_AVAILABLE'
+        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
 
-    def test_assert_duplicate_notifications(self):
+    def test_duplicate_notifications(self):
         """
         This test tests that duplicate notifications are ignored.
         """
-        self.request.method = 'POST'
-        self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
-
         # We have a valid request. So let's confirm that we think we should process
         # and acknowledge it.
         assert (True, True) == self.scaffold.assess_notification_relevance(self.request)
@@ -439,6 +457,14 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
         # As we have already processed that request, we now shouldn't process the request
         # any more. But we still acknowledge it.
+        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
+
+    def test_test_notification(self):
+        """
+        Adyen can send test notifications even to the live system for debugging
+        connection problems. We should acknowledge them, but not process.
+        """
+        self.request.POST[Constants.PSP_REFERENCE] = Constants.TEST_REFERENCE_PREFIX + '_5'
         assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
 
 

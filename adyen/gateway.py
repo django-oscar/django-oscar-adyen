@@ -53,6 +53,7 @@ class Constants:
     PAYMENT_RESULT_ERROR = 'ERROR'
 
     PSP_REFERENCE = 'pspReference'
+    TEST_REFERENCE_PREFIX = 'test_AUTHORISATION'
     REASON = 'reason'
     RECURRING_CONTRACT = 'recurringContract'
     SECRET_KEY = 'secret_key'
@@ -370,6 +371,10 @@ class PaymentNotification(BaseResponse):
 
 
 class PaymentRedirection(BaseResponse):
+    """
+    Class used to process payment notifications from the user; when they paid on Adyen
+    and get redirected back to our site. HTTP GET from user's browser.
+    """
     REQUIRED_FIELDS = (
         Constants.AUTH_RESULT,
         Constants.MERCHANT_REFERENCE,
