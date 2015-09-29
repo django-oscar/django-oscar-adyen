@@ -16,8 +16,8 @@ Adyen package for django-oscar
 
 This package provides integration with the `Adyen`_ payment gateway. It is
 designed to work seamlessly with the e-commerce framework `django-oscar`_ but
-can be used without Oscar. This extension supports Django 1.6+, Python 3.3+ and
-Oscar 0.7+.
+can be used without Oscar. This extension supports Django 1.7+, Python 3.3+ and
+Oscar 1.0+.
 
 .. _`Adyen`: http://www.adyen.com/
 .. _`django-oscar`: https://github.com/tangentlabs/django-oscar
