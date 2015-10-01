@@ -7,6 +7,7 @@ from unittest.mock import Mock
 from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
+
 from freezegun import freeze_time
 
 from adyen.gateway import MissingFieldException, InvalidTransactionException, PaymentNotification, \
@@ -116,13 +117,12 @@ DUMMY_REQUEST = None
 
 class TestAdyenPaymentRequest(TestCase):
 
-    @override_settings(ADYEN_ACTION_URL=TEST_ACTION_URL)
+    @override_settings(ADYEN_ACTION_URL='foo')
     def test_form_action(self):
         """
         Test that the form action is properly fetched from the settings.
         """
-        action_url = self.scaffold.get_form_action(DUMMY_REQUEST)
-        self.assertEqual(action_url, TEST_ACTION_URL)
+        assert 'foo' == Scaffold().get_form_action(DUMMY_REQUEST)
 
     def test_form_fields_ok(self):
         """
@@ -130,9 +130,11 @@ class TestAdyenPaymentRequest(TestCase):
         """
         with freeze_time(TEST_FROZEN_TIME):
             fields_list = Scaffold().get_form_fields(DUMMY_REQUEST, ORDER_DATA)
-            self.assertEqual(len(fields_list), len(EXPECTED_FIELDS_LIST))
+            # Order doesn't matter, so normally we'd use a set. But Python doesn't do
+            # sets of dictionaries, so we compare individually.
+            assert len(fields_list) == len(EXPECTED_FIELDS_LIST)
             for field in fields_list:
-                self.assertIn(field, EXPECTED_FIELDS_LIST)
+                assert field in EXPECTED_FIELDS_LIST
 
     def test_form_fields_with_missing_mandatory_field(self):
         """
