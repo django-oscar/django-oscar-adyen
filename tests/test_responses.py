@@ -3,14 +3,13 @@ from copy import deepcopy
 
 from django.test import TestCase
 
-import six
-
 from adyen.facade import Facade
 from adyen.gateway import MissingFieldException, InvalidTransactionException
 from adyen.models import AdyenTransaction
 from adyen.scaffold import Scaffold
 
 from tests.test_notifications import AUTHORISED_PAYMENT_PARAMS_POST
+
 
 AUTHORISED_PAYMENT_PARAMS_GET = {
     'authResult': 'AUTHORISED',
@@ -75,32 +74,15 @@ class TestAdyenPaymentResponse(TestCase):
         self.request = request
 
     def test_is_valid_ip_address(self):
+        # Valid IPv4 and IPv6 addresses
+        valid_addresses = ['127.0.0.1', '192.168.12.34', '2001:0db8:85a3:0000:0000:8a2e:0370:7334']
+        for address in valid_addresses:
+            assert Facade._is_valid_ip_address(address)
 
-        # The empty string is not a valid IP address.
-        ip_address = ''
-        self.assertFalse(Facade._is_valid_ip_address(ip_address))
-
-        # A kinda random string is not a valid IP address.
-        ip_address = 'TOTORO'
-        self.assertFalse(Facade._is_valid_ip_address(ip_address))
-
-        # These are valid IP addresses.
-        ip_address = '127.0.0.1'
-        self.assertTrue(Facade._is_valid_ip_address(ip_address))
-        ip_address = '192.168.12.34'
-        self.assertTrue(Facade._is_valid_ip_address(ip_address))
-
-        # This one is out of the valid ranges.
-        ip_address = '192.168.12.345'
-        self.assertFalse(Facade._is_valid_ip_address(ip_address))
-
-        # This one is a valid IPv6 address.
-        ip_address = '2001:0db8:85a3:0000:0000:8a2e:0370:7334'
-        self.assertTrue(Facade._is_valid_ip_address(ip_address))
-
-        # This one is an invalid IPv6 address.
-        ip_address = '2001::0234:C1ab::A0:aabc:003F'
-        self.assertFalse(Facade._is_valid_ip_address(ip_address))
+        # Empty string, noise, IPv4 out of range, invalid IPv6-lookalike
+        invalid_addresses = ['', 'TOTORO', '192.168.12.345', '2001::0234:C1ab::A0:aabc:003F']
+        for address in invalid_addresses:
+            assert not Facade._is_valid_ip_address(address)
 
     def test_get_origin_ip_address(self):
         """
@@ -108,56 +90,39 @@ class TestAdyenPaymentResponse(TestCase):
         the possible meaningful combinations of default and custom HTTP header
         names.
         """
-        facade = Facade()
-
         # With no specified ADYEN_IP_ADDRESS_HTTP_HEADER setting,
         # ensure we fetch the origin IP address in the REMOTE_ADDR
         # HTTP header.
-        ip_address = facade._get_origin_ip_address(self.request)
-        self.assertEqual(ip_address, '127.0.0.1')
-        if six.PY3:
-            self.assertEqual(type(ip_address), str)
+        assert '127.0.0.1' == Facade()._get_origin_ip_address(self.request)
 
         # Check the return value is None if we have nothing
         # in the `REMOTE_ADDR` header.
         self.request.META.update({'REMOTE_ADDR': ''})
-        ip_address = facade._get_origin_ip_address(self.request)
-        self.assertIsNone(ip_address)
+        assert Facade()._get_origin_ip_address(self.request) is None
 
         # Check the return value is None if we have no `REMOTE_ADDR`
         # header at all.
         del self.request.META['REMOTE_ADDR']
-        ip_address = facade._get_origin_ip_address(self.request)
-        self.assertIsNone(ip_address)
+        assert Facade()._get_origin_ip_address(self.request) is None
 
         with self.settings(ADYEN_IP_ADDRESS_HTTP_HEADER=TEST_IP_ADDRESS_HTTP_HEADER):
-            facade = Facade()  # Recreate the instance to update the Adyen config.
-
             # Now we add the `HTTP_X_FORWARDED_FOR` header and
             # ensure it is used instead.
             self.request.META.update({
                 'REMOTE_ADDR': '127.0.0.1',
                 'HTTP_X_FORWARDED_FOR': '93.16.93.168'
             })
-            ip_address = facade._get_origin_ip_address(self.request)
-            self.assertEqual(ip_address, '93.16.93.168')
-            if six.PY3:
-                self.assertEqual(type(ip_address), str)
+            assert '93.16.93.168' == Facade()._get_origin_ip_address(self.request)
 
             # Even if the default header is missing.
             del self.request.META['REMOTE_ADDR']
-            ip_address = facade._get_origin_ip_address(self.request)
-            self.assertEqual(ip_address, '93.16.93.168')
-            if six.PY3:
-                self.assertEqual(type(ip_address), str)
+            assert '93.16.93.168' == Facade()._get_origin_ip_address(self.request)
 
             # And finally back to `None` if we have neither header.
             del self.request.META['HTTP_X_FORWARDED_FOR']
-            ip_address = facade._get_origin_ip_address(self.request)
-            self.assertIsNone(ip_address)
+            assert Facade()._get_origin_ip_address(self.request) is None
 
     def test_handle_authorised_payment(self):
-
         self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
         success, status, details = Scaffold().handle_payment_feedback(self.request)
 
