@@ -55,9 +55,9 @@ TAMPERED_PAYMENT_PARAMS = {
 TEST_IP_ADDRESS_HTTP_HEADER = 'HTTP_X_FORWARDED_FOR'
 
 
-class TestAdyenPaymentResponse(TestCase):
+class TestAdyenPaymentRedirects(TestCase):
     """
-    Test case that tests Adyen payment responses (user redirected from Adyen to us)
+    Test case that tests Adyen payment redirects (user redirected from Adyen to us)
     """
 
     def setUp(self):

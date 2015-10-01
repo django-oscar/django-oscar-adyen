@@ -353,7 +353,7 @@ class PaymentNotification(BaseResponse):
         "System communication" setup (instead of the old "notifications" tab
         in the settings).
         We currently don't need any of that data, so we just drop it
-        before validating the response.
+        before validating the notification.
         :return:
         """
         self.params = {
