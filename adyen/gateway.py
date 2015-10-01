@@ -204,9 +204,9 @@ class BaseInteraction:
                 )
 
 
-# ---[ REQUESTS ]---
+# ---[ FORM-BASED REQUESTS ]---
 
-class BaseRequest(BaseInteraction):
+class FormRequest(BaseInteraction):
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
     HASH_KEYS = ()
@@ -228,11 +228,6 @@ class BaseRequest(BaseInteraction):
 
     def hash(self):
         return self.client._compute_hash(self.HASH_KEYS, self.params)
-
-
-# ---[ FORM-BASED REQUESTS ]---
-
-class FormRequest(BaseRequest):
 
     def build_form_fields(self):
         return [{'type': 'hidden', 'name': name, 'value': value}
