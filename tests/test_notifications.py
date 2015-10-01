@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from unittest.mock import Mock
-
-from copy import deepcopy
-
 from django.test import TestCase
 
-from adyen.gateway import MissingFieldException, PaymentNotification, \
-    Constants, UnexpectedFieldException
+from adyen.gateway import Constants
 from adyen.scaffold import Scaffold
+
+from tests import MockRequest
 
 AUTHORISED_PAYMENT_PARAMS_POST = {
     'currency': 'EUR',
@@ -34,13 +29,7 @@ class TestAdyenPaymentNotification(TestCase):
 
     def setUp(self):
         super().setUp()
-        request = Mock()
-        request.method = 'POST'
-        # Most tests use unproxied requests, the case of proxied ones
-        # is unit-tested by the `test_get_origin_ip_address` method.
-        request.META = {'REMOTE_ADDR': '127.0.0.1'}
-        request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
-        self.request = request
+        self.request = MockRequest(method='POST', data=AUTHORISED_PAYMENT_PARAMS_POST)
 
     def test_valid_request(self):
         """
@@ -93,48 +82,3 @@ class TestAdyenPaymentNotification(TestCase):
         """
         self.request.POST[Constants.PSP_REFERENCE] = Constants.TEST_REFERENCE_PREFIX + '_5'
         assert (False, True) == Scaffold().assess_notification_relevance(self.request)
-
-
-class MockClient:
-    secret_key = None
-
-
-class PaymentNotificationTestCase(TestCase):
-
-    def create_mock_notification(self, required=True, optional=False, additional=False):
-        keys_to_set = []
-        if required:
-            keys_to_set += PaymentNotification.REQUIRED_FIELDS
-        if optional:
-            keys_to_set += PaymentNotification.OPTIONAL_FIELDS
-        if additional:
-            keys_to_set += [Constants.ADDITIONAL_DATA_PREFIX + 'foo']
-        params = {key: 'FOO' for key in keys_to_set}
-
-        return PaymentNotification(MockClient(), params)
-
-    def test_required_fields_are_required(self):
-        notification = self.create_mock_notification(
-            required=False, optional=True, additional=True)
-        with self.assertRaises(MissingFieldException):
-            notification.check_fields()
-
-    def test_unknown_fields_cause_exception(self):
-        notification = self.create_mock_notification(
-            required=True, optional=False, additional=False)
-        notification.params['UNKNOWN_FIELD'] = 'foo'
-
-        with self.assertRaises(UnexpectedFieldException):
-            notification.check_fields()
-
-    def test_optional_fields_are_optional(self):
-        notification = self.create_mock_notification(
-            required=True, optional=False, additional=False)
-
-        notification.check_fields()
-
-    def test_additional_fields_are_ignored(self):
-        notification = self.create_mock_notification(
-            required=True, optional=False, additional=True)
-
-        notification.check_fields()
