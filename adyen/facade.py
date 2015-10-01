@@ -11,6 +11,7 @@ from .config import get_config
 
 logger = logging.getLogger('adyen')
 
+
 def get_gateway(request, config):
     return Gateway({
         Constants.IDENTIFIER: config.get_identifier(request),

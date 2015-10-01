@@ -13,12 +13,14 @@ class Scaffold:
     PAYMENT_STATUS_ACCEPTED = 'ACCEPTED'
     PAYMENT_STATUS_CANCELLED = 'CANCELLED'
     PAYMENT_STATUS_REFUSED = 'REFUSED'
+    PAYMENT_STATUS_ERROR = 'ERROR'
 
     # This is the mapping between Adyen-specific and these standard statuses
     ADYEN_TO_COMMON_PAYMENT_STATUSES = {
         Constants.PAYMENT_RESULT_AUTHORISED: PAYMENT_STATUS_ACCEPTED,
         Constants.PAYMENT_RESULT_CANCELLED: PAYMENT_STATUS_CANCELLED,
         Constants.PAYMENT_RESULT_REFUSED: PAYMENT_STATUS_REFUSED,
+        Constants.PAYMENT_RESULT_ERROR: PAYMENT_STATUS_ERROR,
     }
 
     def __init__(self):
@@ -76,7 +78,7 @@ class Scaffold:
         common to all payment provider backends.
         """
         success, adyen_status, details = feedback
-        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES.get(adyen_status)
+        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES[adyen_status]
         return success, common_status, details
 
     def handle_payment_feedback(self, request):

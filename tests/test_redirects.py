@@ -145,8 +145,24 @@ class TestAdyenPaymentRedirects(TestCase):
             else:
                 raise AssertionError("Should've raised an exception, but didn't")
 
-        # After the test, there are still no recorded transactions in the database.
+        # Make sure we haven't recorded any of those faulty transactions.
+        # That way, nobody can fill up our database!
         assert not AdyenTransaction.objects.exists()
 
-        # After the test, there are still no recorded transactions in the database.
-        assert not AdyenTransaction.objects.exists()
+    def test_handle_error_payment(self):
+        # This is actual data received from Adyen causing a bug.
+        # The merchantSig hash was replaced to pass hashing with the test secret key.
+        request = MockRequest({
+            'authResult': 'ERROR',
+            'merchantReference': '09016057',
+            'merchantReturnData': '29232',
+            'merchantSig': 'Y2lpKZPCOpK7WAlCVSgUQcJ9+xQ=',
+            'paymentMethod': 'visa',
+            'shopperLocale': 'fr',
+            'skinCode': '4d72uQqA',
+        })
+
+        success, status, __ = Scaffold().handle_payment_feedback(request)
+        assert (not success) and (status == Scaffold.PAYMENT_STATUS_ERROR)
+
+        assert AdyenTransaction.objects.filter(status='ERROR').count() == 1

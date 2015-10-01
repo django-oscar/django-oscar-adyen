@@ -388,6 +388,6 @@ class PaymentRedirection(BaseResponse):
                 "The transaction is invalid. This may indicate a fraud attempt.")
 
     def process(self):
-        payment_result = self.params.get(Constants.AUTH_RESULT, None)
+        payment_result = self.params[Constants.AUTH_RESULT]
         accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
         return accepted, payment_result, self.params
