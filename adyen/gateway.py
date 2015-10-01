@@ -383,11 +383,9 @@ class PaymentRedirection(BaseResponse):
         # Check that the transaction has not been tampered with.
         received_hash = self.params.get(self.HASH_FIELD)
         expected_hash = self.hash()
-        if expected_hash != received_hash:
+        if not received_hash or expected_hash != received_hash:
             raise InvalidTransactionException(
-                "The transaction is invalid. "
-                "This may indicate a fraud attempt."
-            )
+                "The transaction is invalid. This may indicate a fraud attempt.")
 
     def process(self):
         payment_result = self.params.get(Constants.AUTH_RESULT, None)

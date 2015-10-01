@@ -128,13 +128,25 @@ class TestAdyenPaymentRedirects(TestCase):
         assert AdyenTransaction.objects.filter(status='AUTHORISED').count() == 0
         assert AdyenTransaction.objects.filter(status='REFUSED').count() == 1
 
-    def test_handle_tampered_payment(self):
-        tampered_data = copy(AUTHORISED_PAYMENT_PARAMS_GET)
-        tampered_data['merchantSig'] = '14M4N3V1LH4X0RZ'
-        request = MockRequest(tampered_data)
+    def test_signing_is_enforced(self):
+        fake_signature = copy(AUTHORISED_PAYMENT_PARAMS_GET)
+        fake_signature['merchantSig'] = '14M4N3V1LH4X0RZ'
+        signature_none = copy(AUTHORISED_PAYMENT_PARAMS_GET)
+        signature_none ['merchantSig'] = None
+        signature_empty = copy(AUTHORISED_PAYMENT_PARAMS_GET)
+        signature_empty['merchantSig'] = ''
 
-        with self.assertRaises(InvalidTransactionException):
-            Scaffold().handle_payment_feedback(request)
+        for tampered_data in [fake_signature, signature_empty, signature_none]:
+            request = MockRequest(tampered_data)
+            try:
+                Scaffold().handle_payment_feedback(request)
+            except (InvalidTransactionException, MissingFieldException):
+                pass
+            else:
+                raise AssertionError("Should've raised an exception, but didn't")
+
+        # After the test, there are still no recorded transactions in the database.
+        assert not AdyenTransaction.objects.exists()
 
         # After the test, there are still no recorded transactions in the database.
         assert not AdyenTransaction.objects.exists()
