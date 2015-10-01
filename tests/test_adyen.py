@@ -4,9 +4,9 @@ from copy import deepcopy
 import six
 from unittest.mock import Mock
 
+from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
-
 from freezegun import freeze_time
 
 from adyen.gateway import MissingFieldException, InvalidTransactionException, PaymentNotification, \
@@ -16,10 +16,6 @@ from adyen.scaffold import Scaffold
 from adyen.facade import Facade
 
 
-TEST_IDENTIFIER = 'OscaroFR'
-TEST_SECRET_KEY = 'oscaroscaroscaro'
-TEST_ACTION_URL = 'https://test.adyen.com/hpp/select.shtml'
-TEST_SKIN_CODE = 'cqQJKZpg'
 TEST_IP_ADDRESS_HTTP_HEADER = 'HTTP_X_FORWARDED_FOR'
 
 TEST_RETURN_URL = 'https://www.example.com/checkout/return/adyen/'
@@ -28,7 +24,7 @@ TEST_FROZEN_TIME = '2014-07-31 17:00:00'
 
 EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'currencyCode', 'value': 'EUR'},
-    {'type': 'hidden', 'name': 'merchantAccount', 'value': TEST_IDENTIFIER},
+    {'type': 'hidden', 'name': 'merchantAccount', 'value': settings.ADYEN_IDENTIFIER},
     {'type': 'hidden', 'name': 'merchantReference', 'value': '00000000123'},
     {'type': 'hidden', 'name': 'merchantReturnData', 'value': 123},
     {'type': 'hidden', 'name': 'merchantSig', 'value': 'kKvzRvx7wiPLrl8t8+owcmMuJZM='},
@@ -118,20 +114,7 @@ ORDER_DATA = {
 DUMMY_REQUEST = None
 
 
-@override_settings(
-    ADYEN_IDENTIFIER=TEST_IDENTIFIER,
-    ADYEN_SECRET_KEY=TEST_SECRET_KEY,
-    ADYEN_ACTION_URL=TEST_ACTION_URL,
-    ADYEN_SKIN_CODE=TEST_SKIN_CODE,
-)
-class AdyenTestCase(TestCase):
-
-    def setUp(self):
-        super().setUp()
-        self.scaffold = Scaffold()
-
-
-class TestAdyenPaymentRequest(AdyenTestCase):
+class TestAdyenPaymentRequest(TestCase):
 
     @override_settings(ADYEN_ACTION_URL=TEST_ACTION_URL)
     def test_form_action(self):
@@ -146,7 +129,7 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         Test that the payment form fields list is properly built.
         """
         with freeze_time(TEST_FROZEN_TIME):
-            fields_list = self.scaffold.get_form_fields(DUMMY_REQUEST, ORDER_DATA)
+            fields_list = Scaffold().get_form_fields(DUMMY_REQUEST, ORDER_DATA)
             self.assertEqual(len(fields_list), len(EXPECTED_FIELDS_LIST))
             for field in fields_list:
                 self.assertIn(field, EXPECTED_FIELDS_LIST)
@@ -160,10 +143,10 @@ class TestAdyenPaymentRequest(AdyenTestCase):
         del new_order_data['amount']
 
         with self.assertRaises(MissingFieldException):
-            self.scaffold.get_form_fields(DUMMY_REQUEST, new_order_data)
+            Scaffold().get_form_fields(DUMMY_REQUEST, new_order_data)
 
 
-class TestAdyenPaymentResponse(AdyenTestCase):
+class TestAdyenPaymentResponse(TestCase):
     """
     Test case that tests Adyen payment responses (user redirected from Adyen to us)
     """
@@ -266,7 +249,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
     def test_handle_authorised_payment(self):
 
         self.request.GET = deepcopy(AUTHORISED_PAYMENT_PARAMS_GET)
-        success, status, details = self.scaffold.handle_payment_feedback(self.request)
+        success, status, details = Scaffold().handle_payment_feedback(self.request)
 
         self.assertTrue(success)
         self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
@@ -294,11 +277,11 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         # This is going to fail because the mandatory fields are not the same
         # for GET and POST requests.
         with self.assertRaises(MissingFieldException):
-            self.scaffold.handle_payment_feedback(self.request)
+            Scaffold().handle_payment_feedback(self.request)
 
         # So, let's try again with valid POST parameters.
         self.request.POST = deepcopy(AUTHORISED_PAYMENT_PARAMS_POST)
-        success, status, details = self.scaffold.handle_payment_feedback(self.request)
+        success, status, details = Scaffold().handle_payment_feedback(self.request)
 
         self.assertTrue(success)
         self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
@@ -335,7 +318,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertIsNone(ip_address)
 
         # ... and finally make sure everything works as expected.
-        success, status, details = self.scaffold.handle_payment_feedback(self.request)
+        success, status, details = Scaffold().handle_payment_feedback(self.request)
 
         self.assertTrue(success)
         self.assertEqual(status, Scaffold.PAYMENT_STATUS_ACCEPTED)
@@ -358,7 +341,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_recorded_transactions, 0)
 
         self.request.GET = deepcopy(CANCELLED_PAYMENT_PARAMS)
-        success, status, __ = self.scaffold.handle_payment_feedback(self.request)
+        success, status, __ = Scaffold().handle_payment_feedback(self.request)
         self.assertFalse(success)
         self.assertEqual(status, Scaffold.PAYMENT_STATUS_CANCELLED)
 
@@ -375,7 +358,7 @@ class TestAdyenPaymentResponse(AdyenTestCase):
         self.assertEqual(num_recorded_transactions, 0)
 
         self.request.GET = deepcopy(REFUSED_PAYMENT_PARAMS)
-        success, status, __ = self.scaffold.handle_payment_feedback(self.request)
+        success, status, __ = Scaffold().handle_payment_feedback(self.request)
         self.assertFalse(success)
         self.assertEqual(status, Scaffold.PAYMENT_STATUS_REFUSED)
 
@@ -393,14 +376,14 @@ class TestAdyenPaymentResponse(AdyenTestCase):
 
         self.request.GET = deepcopy(TAMPERED_PAYMENT_PARAMS)
         with self.assertRaises(InvalidTransactionException):
-            self.scaffold.handle_payment_feedback(self.request)
+            Scaffold().handle_payment_feedback(self.request)
 
         # After the test, there are still no recorded transactions in the database.
         num_recorded_transactions = AdyenTransaction.objects.all().count()
         self.assertEqual(num_recorded_transactions, 0)
 
 
-class TestAdyenPaymentNotification(AdyenTestCase):
+class TestAdyenPaymentNotification(TestCase):
     """
     Test case that tests Adyen payment notifications (Adyen servers POST'ing to us)
     """
@@ -421,7 +404,7 @@ class TestAdyenPaymentNotification(AdyenTestCase):
         we should both process and acknowledge it. This test is needed
         as a base assumption for the tests below.
         """
-        assert (True, True) == self.scaffold.assess_notification_relevance(self.request)
+        assert (True, True) == Scaffold().assess_notification_relevance(self.request)
 
     def test_platform_mismatch_live_notification(self):
         """
@@ -429,12 +412,12 @@ class TestAdyenPaymentNotification(AdyenTestCase):
         we should just let it be.
         """
         self.request.POST['live'] = 'true'
-        assert (False, False) == self.scaffold.assess_notification_relevance(self.request)
+        assert (False, False) == Scaffold().assess_notification_relevance(self.request)
 
     def test_platform_mismatch_live_server(self):
         self.request.POST['live'] = 'false'
         with self.settings(ADYEN_ACTION_URL='https://live.adyen.com/hpp/select.shtml'):
-            assert (False, False) == self.scaffold.assess_notification_relevance(self.request)
+            assert (False, False) == Scaffold().assess_notification_relevance(self.request)
 
     def test_non_authorisation(self):
         """
@@ -442,7 +425,7 @@ class TestAdyenPaymentNotification(AdyenTestCase):
         but not try to process it.
         """
         self.request.POST[Constants.EVENT_CODE] = 'REPORT_AVAILABLE'
-        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
+        assert (False, True) == Scaffold().assess_notification_relevance(self.request)
 
     def test_duplicate_notifications(self):
         """
@@ -450,14 +433,14 @@ class TestAdyenPaymentNotification(AdyenTestCase):
         """
         # We have a valid request. So let's confirm that we think we should process
         # and acknowledge it.
-        assert (True, True) == self.scaffold.assess_notification_relevance(self.request)
+        assert (True, True) == Scaffold().assess_notification_relevance(self.request)
 
         # Let's process it then.
-        __, __, __ = self.scaffold.handle_payment_feedback(self.request)
+        __, __, __ = Scaffold().handle_payment_feedback(self.request)
 
         # As we have already processed that request, we now shouldn't process the request
         # any more. But we still acknowledge it.
-        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
+        assert (False, True) == Scaffold().assess_notification_relevance(self.request)
 
     def test_test_notification(self):
         """
@@ -465,7 +448,7 @@ class TestAdyenPaymentNotification(AdyenTestCase):
         connection problems. We should acknowledge them, but not process.
         """
         self.request.POST[Constants.PSP_REFERENCE] = Constants.TEST_REFERENCE_PREFIX + '_5'
-        assert (False, True) == self.scaffold.assess_notification_relevance(self.request)
+        assert (False, True) == Scaffold().assess_notification_relevance(self.request)
 
 
 class MockClient:
