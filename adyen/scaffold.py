@@ -10,15 +10,22 @@ class Scaffold:
     # These are the constants that all scaffolds are expected to return
     # to a multi-psp application. They might look like those actually returned
     # by the psp itself, but that would be a pure coincidence.
+    # At some point we could discuss merging cancelled & refused & error and just
+    # ensuring good error messages are returned. I doubt the distinction is
+    # important to most checkout procedures.
     PAYMENT_STATUS_ACCEPTED = 'ACCEPTED'
     PAYMENT_STATUS_CANCELLED = 'CANCELLED'
     PAYMENT_STATUS_REFUSED = 'REFUSED'
+    PAYMENT_STATUS_ERROR = 'ERROR'
+    PAYMENT_STATUS_PENDING = 'PENDING'
 
     # This is the mapping between Adyen-specific and these standard statuses
     ADYEN_TO_COMMON_PAYMENT_STATUSES = {
         Constants.PAYMENT_RESULT_AUTHORISED: PAYMENT_STATUS_ACCEPTED,
         Constants.PAYMENT_RESULT_CANCELLED: PAYMENT_STATUS_CANCELLED,
         Constants.PAYMENT_RESULT_REFUSED: PAYMENT_STATUS_REFUSED,
+        Constants.PAYMENT_RESULT_ERROR: PAYMENT_STATUS_ERROR,
+        Constants.PAYMENT_RESULT_PENDING: PAYMENT_STATUS_PENDING,
     }
 
     def __init__(self):
@@ -76,7 +83,7 @@ class Scaffold:
         common to all payment provider backends.
         """
         success, adyen_status, details = feedback
-        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES.get(adyen_status)
+        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES[adyen_status]
         return success, common_status, details
 
     def handle_payment_feedback(self, request):

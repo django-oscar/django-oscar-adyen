@@ -180,6 +180,16 @@ class Gateway:
 
 
 class BaseInteraction:
+    REQUIRED_FIELDS = ()
+    OPTIONAL_FIELDS = ()
+    HASH_KEYS = ()
+    HASH_FIELD = None
+
+    def hash(self):
+        return self.client._compute_hash(self.HASH_KEYS, self.params)
+
+    def validate(self):
+        self.check_fields()
 
     def check_fields(self):
         """
@@ -204,42 +214,9 @@ class BaseInteraction:
                 )
 
 
-# ---[ REQUESTS ]---
-
-class BaseRequest(BaseInteraction):
-    REQUIRED_FIELDS = ()
-    OPTIONAL_FIELDS = ()
-    HASH_KEYS = ()
-
-    def __init__(self, client, params=None):
-
-        if params is None:
-            params = {}
-
-        self.client = client
-        self.params = params
-        self.validate()
-
-        # Compute request hash.
-        self.params.update({self.HASH_FIELD: self.hash()})
-
-    def validate(self):
-        self.check_fields()
-
-    def hash(self):
-        return self.client._compute_hash(self.HASH_KEYS, self.params)
-
-
 # ---[ FORM-BASED REQUESTS ]---
 
-class FormRequest(BaseRequest):
-
-    def build_form_fields(self):
-        return [{'type': 'hidden', 'name': name, 'value': value}
-                for name, value in self.params.items()]
-
-
-class PaymentFormRequest(FormRequest):
+class PaymentFormRequest(BaseInteraction):
     REQUIRED_FIELDS = (
         Constants.MERCHANT_ACCOUNT,
         Constants.MERCHANT_REFERENCE,
@@ -290,25 +267,27 @@ class PaymentFormRequest(FormRequest):
         Constants.OFFSET,
     )
 
+    def __init__(self, client, params=None):
+        self.client = client
+        self.params = params or {}
+        self.validate()
+
+        # Compute request hash.
+        self.params.update({self.HASH_FIELD: self.hash()})
+
+    def build_form_fields(self):
+        return [{'type': 'hidden', 'name': name, 'value': value}
+                for name, value in self.params.items()]
+
 
 # ---[ RESPONSES ]---
 
 class BaseResponse(BaseInteraction):
-    REQUIRED_FIELDS = ()
-    OPTIONAL_FIELDS = ()
-    HASH_FIELD = None
-    HASH_KEYS = ()
 
     def __init__(self, client, params):
         self.client = client
         self.secret_key = client.secret_key
         self.params = params
-
-    def validate(self):
-        self.check_fields()
-
-    def hash(self):
-        return self.client._compute_hash(self.HASH_KEYS, self.params)
 
     def process(self):
         return NotImplemented
@@ -353,7 +332,7 @@ class PaymentNotification(BaseResponse):
         "System communication" setup (instead of the old "notifications" tab
         in the settings).
         We currently don't need any of that data, so we just drop it
-        before validating the response.
+        before validating the notification.
         :return:
         """
         self.params = {
@@ -404,13 +383,11 @@ class PaymentRedirection(BaseResponse):
         # Check that the transaction has not been tampered with.
         received_hash = self.params.get(self.HASH_FIELD)
         expected_hash = self.hash()
-        if expected_hash != received_hash:
+        if not received_hash or expected_hash != received_hash:
             raise InvalidTransactionException(
-                "The transaction is invalid. "
-                "This may indicate a fraud attempt."
-            )
+                "The transaction is invalid. This may indicate a fraud attempt.")
 
     def process(self):
-        payment_result = self.params.get(Constants.AUTH_RESULT, None)
+        payment_result = self.params[Constants.AUTH_RESULT]
         accepted = payment_result == Constants.PAYMENT_RESULT_AUTHORISED
         return accepted, payment_result, self.params

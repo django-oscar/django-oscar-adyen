@@ -21,3 +21,8 @@ MIDDLEWARE_CLASSES = (
 )
 
 INSTALLED_APPS = ('adyen',)
+
+ADYEN_IDENTIFIER = 'OscaroFR'
+ADYEN_SECRET_KEY = 'oscaroscaroscaro'
+ADYEN_ACTION_URL = 'https://test.adyen.com/hpp/select.shtml'
+ADYEN_SKIN_CODE = 'cqQJKZpg'
