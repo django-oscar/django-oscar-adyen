@@ -1,18 +1,6 @@
 from setuptools import setup, find_packages
 
-# dirty hack to allow running sdist in a vbox
-# source: Leonardo.Z's answer on this StackOverflow thread:
-# http://stackoverflow.com/questions/7719380/python-setup-py-sdist-error-operation-not-permitted
-
-import os
-if os.environ.get('USER', '') == 'vagrant':
-    del os.link
-
-# /dirty hack
-
-
 setup(
-
     name='django-oscar-adyen',
     version='0.5.0',
     url='https://github.com/oscaro/django-oscar-adyen',
