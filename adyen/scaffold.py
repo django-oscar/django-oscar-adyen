@@ -14,6 +14,7 @@ class Scaffold:
     PAYMENT_STATUS_CANCELLED = 'CANCELLED'
     PAYMENT_STATUS_REFUSED = 'REFUSED'
     PAYMENT_STATUS_ERROR = 'ERROR'
+    PAYMENT_STATUS_PENDING = 'PENDING'
 
     # This is the mapping between Adyen-specific and these standard statuses
     ADYEN_TO_COMMON_PAYMENT_STATUSES = {
@@ -21,6 +22,7 @@ class Scaffold:
         Constants.PAYMENT_RESULT_CANCELLED: PAYMENT_STATUS_CANCELLED,
         Constants.PAYMENT_RESULT_REFUSED: PAYMENT_STATUS_REFUSED,
         Constants.PAYMENT_RESULT_ERROR: PAYMENT_STATUS_ERROR,
+        Constants.PAYMENT_RESULT_PENDING: PAYMENT_STATUS_PENDING,
     }
 
     def __init__(self):

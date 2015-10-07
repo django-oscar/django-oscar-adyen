@@ -166,3 +166,20 @@ class TestAdyenPaymentRedirects(TestCase):
         assert (not success) and (status == Scaffold.PAYMENT_STATUS_ERROR)
 
         assert AdyenTransaction.objects.filter(status='ERROR').count() == 1
+
+    def test_handle_pending_payment(self):
+        # Modified actual data (see test_handle_error_payment)
+        request = MockRequest({
+            'authResult': 'PENDING',
+            'merchantReference': '09016057',
+            'merchantReturnData': '29232',
+            'merchantSig': 'QTUYO2Bk9CbVCfUztp+MuCFe8do=',
+            'paymentMethod': 'visa',
+            'shopperLocale': 'fr',
+            'skinCode': '4d72uQqA',
+        })
+
+        success, status, __ = Scaffold().handle_payment_feedback(request)
+        assert (not success) and (status == Scaffold.PAYMENT_STATUS_PENDING)
+
+        assert AdyenTransaction.objects.filter(status='PENDING').count() == 1
