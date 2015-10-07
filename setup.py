@@ -13,7 +13,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'iptools==0.6.1',
-        'requests>=2.0,<3.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -29,5 +28,4 @@ setup(
         'Topic :: Office/Business :: Financial :: Point-Of-Sale',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]
-
 )
