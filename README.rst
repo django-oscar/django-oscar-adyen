@@ -15,27 +15,21 @@ Adyen package for django-oscar
     :alt: TravisCI status
 
 This package provides integration with the `Adyen`_ payment gateway. It is
-designed to work seamlessly with the e-commerce framework `django-oscar`_ but
+designed to work seamlessly with the e-commerce framework `django-oscar`_, but
 can be used without Oscar. This extension supports Django 1.7+, Python 3.3+ and
 Oscar 1.0+.
 
 .. _`Adyen`: http://www.adyen.com/
-.. _`django-oscar`: https://github.com/tangentlabs/django-oscar
+.. _`django-oscar`: https://github.com/django-oscar/django-oscar
 
-
-Getting started
-===============
 
 Installation
-------------
+============
 
-From PyPi::
+Get it from PyPi::
 
     $ pip install django-oscar-adyen
 
-or from Github::
-
-    $ pip install git+git://github.com/oscaro/django-oscar-adyen.git#egg=django-oscar-adyen
 
 Add ``'adyen'`` to ``INSTALLED_APPS`` and run::
 
@@ -75,6 +69,12 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 
 Changes
 =======
+
+0.5.0 - released October 7th, 2015
+----------------------------------
+- Add support for Adyen's `ERROR` and `PENDING` payment statuses
+  (https://github.com/oscaro/django-oscar-adyen/pull/20). This means two additional payment
+  statuses for the `Scaffold` interface; please adapt your code as needed when upgrading.
 
 0.4.2 - released September 29, 2015
 -----------------------------------
