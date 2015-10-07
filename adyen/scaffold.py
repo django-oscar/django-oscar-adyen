@@ -10,6 +10,9 @@ class Scaffold:
     # These are the constants that all scaffolds are expected to return
     # to a multi-psp application. They might look like those actually returned
     # by the psp itself, but that would be a pure coincidence.
+    # At some point we could discuss merging cancelled & refused & error and just
+    # ensuring good error messages are returned. I doubt the distinction is
+    # important to most checkout procedures.
     PAYMENT_STATUS_ACCEPTED = 'ACCEPTED'
     PAYMENT_STATUS_CANCELLED = 'CANCELLED'
     PAYMENT_STATUS_REFUSED = 'REFUSED'

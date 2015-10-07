@@ -23,7 +23,11 @@ AUTHORISED_PAYMENT_PARAMS_GET = {
 
 class TestAdyenPaymentRedirects(TestCase):
     """
-    Test case that tests Adyen payment redirects (user redirected from Adyen to us)
+    Test case that tests Adyen payment redirects (user redirected from Adyen to us).
+
+    Note that notifications and redirects are pretty similar and share a lot of
+    common code. So those tests will actually test a lot of code for notifications
+    as well. In an ideal world, we'd split things up to check the shared code individually.
     """
 
     def test_handle_authorised_payment(self):
@@ -129,6 +133,15 @@ class TestAdyenPaymentRedirects(TestCase):
         assert AdyenTransaction.objects.filter(status='REFUSED').count() == 1
 
     def test_signing_is_enforced(self):
+        """
+        Test that the supplied signature (in field merchantSig) is checked and
+        notifications are ignored when the signature doesn't match.
+
+        In an ideal world, our other tests would ignore the signature checking
+        because it's annoying to have to alter the sig when altering the fake
+        data. Maik gets valid signatures by adding a print(expected_hash) to
+        PaymentRedirection.validate.
+        """
         fake_signature = copy(AUTHORISED_PAYMENT_PARAMS_GET)
         fake_signature['merchantSig'] = '14M4N3V1LH4X0RZ'
         signature_none = copy(AUTHORISED_PAYMENT_PARAMS_GET)
