@@ -20,7 +20,7 @@ def get_gateway(request, config):
     })
 
 
-class Facade:
+class Facade(object):
 
     def __init__(self):
         self.config = get_config()

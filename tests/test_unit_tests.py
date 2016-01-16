@@ -1,4 +1,6 @@
-from django.test import override_settings, TestCase
+from django.test import TestCase
+from django.test.utils import override_settings
+
 from adyen.facade import Facade
 from adyen.gateway import PaymentNotification, Constants, MissingFieldException, \
     UnexpectedFieldException

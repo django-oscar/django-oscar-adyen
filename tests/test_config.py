@@ -30,10 +30,11 @@ class FromSettingsTestCase(TestCase):
 
     # https://docs.djangoproject.com/en/1.8/topics/testing/tools/#django.test.modify_settings
     # Override settings is needed to let us delete settings on a per-test basis.
-    @override_settings()
+    @override_settings(ADYEN_ACTION_URL='bar')
     def test_complains_when_not_fully_configured(self):
         # If the setting is missing, a proper exception is raised
         del settings.ADYEN_ACTION_URL
+        assert not hasattr(settings, 'ADYEN_ACTION_URL')
         with self.assertRaises(ImproperlyConfigured):
             get_config()
 

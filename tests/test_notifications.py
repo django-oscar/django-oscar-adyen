@@ -28,7 +28,7 @@ class TestAdyenPaymentNotification(TestCase):
     """
 
     def setUp(self):
-        super().setUp()
+        super(TestAdyenPaymentNotification, self).setUp()
         self.request = MockRequest(method='POST', data=AUTHORISED_PAYMENT_PARAMS_POST)
 
     def test_valid_request(self):

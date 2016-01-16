@@ -10,7 +10,7 @@ logger = logging.getLogger('adyen')
 
 # ---[ CONSTANTS ]---
 
-class Constants:
+class Constants(object):
 
     ACCEPTED_NOTIFICATION = '[accepted]'
 
@@ -95,7 +95,7 @@ class InvalidTransactionException(ValueError):
 
 # ---[ GATEWAY ]---
 
-class Gateway:
+class Gateway(object):
 
     MANDATORY_SETTINGS = (
         Constants.IDENTIFIER,
@@ -160,7 +160,7 @@ class Gateway:
         """
         signature = ''.join(str(params.get(key, '')) for key in keys)
         hm = hmac.new(self.secret_key.encode(), signature.encode(), hashlib.sha1)
-        hash_ = base64.encodebytes(hm.digest()).strip().decode('utf-8')
+        hash_ = base64.b64encode(hm.digest()).strip().decode('utf-8')
         return hash_
 
     def _build_form_fields(self, adyen_request):
@@ -179,7 +179,7 @@ class Gateway:
         return adyen_response.process()
 
 
-class BaseInteraction:
+class BaseInteraction(object):
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
     HASH_KEYS = ()
@@ -339,7 +339,7 @@ class PaymentNotification(BaseResponse):
             key: self.params[key]
             for key in self.params if Constants.ADDITIONAL_DATA_PREFIX not in key
         }
-        super().check_fields()
+        super(PaymentNotification, self).check_fields()
 
     def process(self):
         payment_result = self.params.get(Constants.SUCCESS, None)
@@ -378,7 +378,7 @@ class PaymentRedirection(BaseResponse):
     )
 
     def validate(self):
-        super().validate()
+        super(PaymentRedirection, self).validate()
 
         # Check that the transaction has not been tampered with.
         received_hash = self.params.get(self.HASH_FIELD)

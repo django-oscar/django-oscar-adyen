@@ -1,5 +1,10 @@
+import django
+
 from django.conf import settings
-from django.utils.module_loading import import_string
+if django.VERSION < (1, 7):
+    from django.utils.module_loading import import_by_path as import_string
+else:
+    from django.utils.module_loading import import_string
 
 
 def get_config():

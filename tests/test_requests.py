@@ -1,5 +1,6 @@
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.test import TestCase
+from django.test.utils import override_settings
 
 from freezegun import freeze_time
 
