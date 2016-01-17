@@ -56,6 +56,8 @@ Edit your ``settings.py`` to set the following settings:
   (e.g. 'https://test.adyen.com/hpp/select.shtml').
 * ``ADYEN_IP_ADDRESS_HTTP_HEADER`` - Optional. The header in `META` to inspect to determine
   the IP address of the request. Defaults to `REMOTE_ADDR`.
+* ``ADYEN_HMAC_ALGORITHM`` - Optional. The algorithm to use when calculating the HMAC for
+  the merchant signature. Supports `'SHA1'` and `'SHA256'`. Defaults to `'SHA1'`.
 
 You will likely need to specify different settings in your test environment
 as opposed to your production environment.

@@ -32,10 +32,27 @@ class FromSettingsTestCase(TestCase):
     # Override settings is needed to let us delete settings on a per-test basis.
     @override_settings()
     def test_complains_when_not_fully_configured(self):
-        # If the setting is missing, a proper exception is raised
+        """
+        If the setting is missing, a proper exception is raised.
+        """
         del settings.ADYEN_ACTION_URL
         with self.assertRaises(ImproperlyConfigured):
             get_config()
+
+    @override_settings(ADYEN_HMAC_ALGORITHM='bogus_algo')
+    def test_invalid_hmac_algorithm(self):
+        """
+        Test that an invalid HMAC algorithm value raises an exception.
+        """
+        with self.assertRaises(ImproperlyConfigured):
+            get_config()
+
+    @override_settings(ADYEN_HMAC_ALGORITHM='SHA256')
+    def test_sha256_hmac_algorithm(self):
+        """
+        Test that SHA256 can be configured as an HMAC algorithm.
+        """
+        assert get_config().get_hmac_algorithm(None) == 'SHA256'
 
 
 class DummyConfigClass(AbstractAdyenConfig):

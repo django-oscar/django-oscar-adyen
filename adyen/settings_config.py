@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from .config import AbstractAdyenConfig
+from .config import AbstractAdyenConfig, HMAC_ALGORITHMS
 
 
 class FromSettingsConfig(AbstractAdyenConfig):
@@ -23,6 +23,11 @@ class FromSettingsConfig(AbstractAdyenConfig):
             raise ImproperlyConfigured(
                 "You are using the FromSettingsConfig config class, but haven't set the "
                 "the following required settings: %s" % missing_settings)
+        if hasattr(settings, 'ADYEN_HMAC_ALGORITHM'):
+            if settings.ADYEN_HMAC_ALGORITHM not in HMAC_ALGORITHMS:
+                raise ImproperlyConfigured(
+                    "ADYEN_HMAC_ALGORITHM is not valid. Supported values are: %s." %
+                    ", ".join(HMAC_ALGORITHMS))
 
     def get_identifier(self, request):
         return settings.ADYEN_IDENTIFIER
@@ -41,3 +46,9 @@ class FromSettingsConfig(AbstractAdyenConfig):
             return settings.ADYEN_IP_ADDRESS_HTTP_HEADER
         except AttributeError:
             return 'REMOTE_ADDR'
+
+    def get_hmac_algorithm(self, request):
+        try:
+            return settings.ADYEN_HMAC_ALGORITHM
+        except AttributeError:
+            return 'SHA1'
