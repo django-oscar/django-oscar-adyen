@@ -50,7 +50,7 @@ class TestAdyenPaymentRequest(TestCase):
         """
         assert 'foo' == Scaffold().get_form_action(request=None)
 
-    def test_form_fields_ok(self):
+    def _check_form_fields(self, expected):
         """
         Test that the payment form fields list is properly built.
         """
@@ -58,9 +58,21 @@ class TestAdyenPaymentRequest(TestCase):
             fields_list = Scaffold().get_form_fields(request=None, order_data=ORDER_DATA)
             # Order doesn't matter, so normally we'd use a set. But Python doesn't do
             # sets of dictionaries, so we compare individually.
-            assert len(fields_list) == len(EXPECTED_FIELDS_LIST)
+            assert len(fields_list) == len(expected)
             for field in fields_list:
-                assert field in EXPECTED_FIELDS_LIST
+                assert field in expected
+
+    @override_settings(ADYEN_HMAC_ALGORITHM='SHA1')
+    def test_form_fields_ok_SHA1(self):
+        self._check_form_fields(EXPECTED_FIELDS_LIST)
+
+    @override_settings(ADYEN_HMAC_ALGORITHM='SHA256',
+                       ADYEN_SECRET_KEY='BE0FA52C9A1D2C7216C6C0EB682588DF83F04407325C152BEC0D93F47'
+                                        '2AD3BFB')
+    def test_form_fields_ok_SHA256(self):
+        expected = list(EXPECTED_FIELDS_LIST)
+        expected[4]['value'] = 'A4ojHW83DZyzgN+9wbvyd3r+XFao16/3qMBAwYGTR9g='
+        self._check_form_fields(expected)
 
     def test_form_fields_with_missing_mandatory_field(self):
         """

@@ -1,5 +1,6 @@
 from copy import copy
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from adyen.facade import Facade
 from adyen.gateway import MissingFieldException, InvalidTransactionException
@@ -75,6 +76,16 @@ class TestAdyenPaymentRedirects(TestCase):
         assert AdyenTransaction.objects.filter(status='AUTHORISED').count() == 1
         assert AdyenTransaction.objects.filter(status='REFUSED').count() == 0
 
+    @override_settings(ADYEN_HMAC_ALGORITHM='SHA256',
+                       ADYEN_SECRET_KEY='BE0FA52C9A1D2C7216C6C0EB682588DF83F04407325C152BEC0D93F47'
+                                        '2AD3BFB')
+    def test_handle_authorised_payment_SHA256(self):
+        params = AUTHORISED_PAYMENT_PARAMS_GET.copy()
+        params['merchantSig'] = 'Y5xWRpCrYZdS8HouaxMAh4Uv7PSfQOXO+fcCgnCsm0c='
+        request = MockRequest(params)
+        success, status, details = Scaffold().handle_payment_feedback(request)
+        assert success
+
     def test_handle_authorized_payment_if_no_ip_address_was_found(self):
         """
         A slight variation on the previous test.
@@ -132,7 +143,17 @@ class TestAdyenPaymentRedirects(TestCase):
         assert AdyenTransaction.objects.filter(status='AUTHORISED').count() == 0
         assert AdyenTransaction.objects.filter(status='REFUSED').count() == 1
 
-    def test_signing_is_enforced(self):
+    @override_settings(ADYEN_HMAC_ALGORITHM='SHA1')
+    def test_signing_is_enforced_SHA1(self):
+        self._do_test_signing_is_enforced()
+
+    @override_settings(ADYEN_HMAC_ALGORITHM='SHA256',
+                       ADYEN_SECRET_KEY='BE0FA52C9A1D2C7216C6C0EB682588DF83F04407325C152BEC0D93F47'
+                                        '2AD3BFB')
+    def test_signing_is_enforced_SHA256(self):
+        self._do_test_signing_is_enforced()
+
+    def _do_test_signing_is_enforced(self):
         """
         Test that the supplied signature (in field merchantSig) is checked and
         notifications are ignored when the signature doesn't match.
@@ -145,7 +166,7 @@ class TestAdyenPaymentRedirects(TestCase):
         fake_signature = copy(AUTHORISED_PAYMENT_PARAMS_GET)
         fake_signature['merchantSig'] = '14M4N3V1LH4X0RZ'
         signature_none = copy(AUTHORISED_PAYMENT_PARAMS_GET)
-        signature_none ['merchantSig'] = None
+        signature_none['merchantSig'] = None
         signature_empty = copy(AUTHORISED_PAYMENT_PARAMS_GET)
         signature_empty['merchantSig'] = ''
 

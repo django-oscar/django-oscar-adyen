@@ -5,7 +5,7 @@ import logging
 
 from django.http import HttpResponse
 
-from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
+from .gateway import Constants, Gateway
 from .models import AdyenTransaction
 from .config import get_config
 
@@ -13,10 +13,11 @@ logger = logging.getLogger('adyen')
 
 
 def get_gateway(request, config):
-    return Gateway({
+    return Gateway(request, {
         Constants.IDENTIFIER: config.get_identifier(request),
         Constants.SECRET_KEY: config.get_skin_secret(request),
         Constants.ACTION_URL: config.get_action_url(request),
+        Constants.HMAC_ALGORITHM: config.get_hmac_algorithm(request),
     })
 
 
@@ -144,20 +145,8 @@ class Facade:
         Validate, process, optionally record audit trail and provide feedback
         about the current payment response.
         """
-        # We must first find out whether this is a redirection or a notification.
-
-        if request.method == 'GET':
-            params = request.GET
-            response_class = PaymentRedirection
-        elif request.method == 'POST':
-            params = request.POST
-            response_class = PaymentNotification
-        else:
-            raise RuntimeError("Only GET and POST requests are supported.")
-
-        # Then we can instantiate the appropriate class from the gateway.
         gateway = get_gateway(request, self.config)
-        response = response_class(gateway, params)
+        response = gateway.get_response()
 
         # Note that this may raise an exception if the response is invalid.
         # For example: MissingFieldException, UnexpectedFieldException, ...
