@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 from copy import copy
 from django.test import TestCase
 
 from adyen.facade import Facade
-from adyen.gateway import MissingFieldException, InvalidTransactionException
+from adyen.gateway import MissingFieldException, InvalidTransactionException, Constants
 from adyen.models import AdyenTransaction
 from adyen.scaffold import Scaffold
 
@@ -36,16 +37,8 @@ class TestAdyenPaymentRedirects(TestCase):
 
         assert success
         assert status == Scaffold.PAYMENT_STATUS_ACCEPTED
-        assert details['amount'] == 13894
-        assert details['ip_address'] == '127.0.0.1'
-        assert details['method'] == 'adyen'
-        assert details['psp_reference'] == '8814136447235922'
-        assert details['status'] == 'AUTHORISED'
 
-        # After calling `handle_payment_feedback` there is one authorised
-        # transaction and no refused transaction in the database.
-        assert AdyenTransaction.objects.filter(status='AUTHORISED').count() == 1
-        assert AdyenTransaction.objects.filter(status='REFUSED').count() == 0
+        self._assert_accepted_details(details)
 
         # We delete the previously recorded AdyenTransaction.
         AdyenTransaction.objects.filter(status='AUTHORISED').delete()
@@ -68,6 +61,18 @@ class TestAdyenPaymentRedirects(TestCase):
         assert details['ip_address'] == '127.0.0.1'
         assert details['method'] == 'adyen'
         assert details['psp_reference'] == '7914120802434172'
+        assert details['status'] == 'AUTHORISED'
+
+        # After calling `handle_payment_feedback` there is one authorised
+        # transaction and no refused transaction in the database.
+        assert AdyenTransaction.objects.filter(status='AUTHORISED').count() == 1
+        assert AdyenTransaction.objects.filter(status='REFUSED').count() == 0
+
+    def _assert_accepted_details(self, details):
+        assert details['amount'] == 13894
+        assert details['ip_address'] == '127.0.0.1'
+        assert details['method'] == 'adyen'
+        assert details['psp_reference'] == '8814136447235922'
         assert details['status'] == 'AUTHORISED'
 
         # After calling `handle_payment_feedback` there is one authorised
@@ -196,3 +201,33 @@ class TestAdyenPaymentRedirects(TestCase):
         assert (not success) and (status == Scaffold.PAYMENT_STATUS_PENDING)
 
         assert AdyenTransaction.objects.filter(status='PENDING').count() == 1
+
+    def test_handle_merchant_return_data_with_magic_char(self):
+        data = AUTHORISED_PAYMENT_PARAMS_GET.copy()
+        custom_return_data = 'custom~return~data'
+        data[Constants.MERCHANT_RETURN_DATA] += '~%s' % custom_return_data
+        data[Constants.MERCHANT_SIG] = '86AroR/R2wcDv2NcrdKdB8TLx4s='
+        request = MockRequest(data)
+        success, status, details = Scaffold().handle_payment_feedback(request)
+
+        assert success
+        assert status == Scaffold.PAYMENT_STATUS_ACCEPTED
+
+        self._assert_accepted_details(details)
+
+        assert details['merchant_return_data'] == custom_return_data
+
+    def test_handle_encoded_merchant_return_data(self):
+        data = AUTHORISED_PAYMENT_PARAMS_GET.copy()
+        custom_return_data = '%F0%9F%8E%B8+G%C3%BCit%C3%A4r'
+        data[Constants.MERCHANT_RETURN_DATA] += '~%s' % custom_return_data
+        data[Constants.MERCHANT_SIG] = 'qOF1wyTkRawrwrqPW0PRmQm7fc0='
+        request = MockRequest(data)
+        success, status, details = Scaffold().handle_payment_feedback(request)
+
+        assert success
+        assert status == Scaffold.PAYMENT_STATUS_ACCEPTED
+
+        self._assert_accepted_details(details)
+
+        assert details['merchant_return_data'] == u'\U0001f3b8 G\xfcit\xe4r'
