@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 
-import iptools
 import logging
 
+import iptools
 from django.http import HttpResponse
+from oscar.core.loading import get_class
 
-from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
-from .models import AdyenTransaction
 from .config import get_config
+from .models import AdyenTransaction
+
+Constants = get_class('adyen.gateway', 'Constants')
+Gateway = get_class('adyen.gateway', 'Gateway')
+PaymentNotification = get_class('adyen.gateway', 'PaymentNotification')
+PaymentRedirection = get_class('adyen.gateway', 'PaymentRedirection')
+
 
 logger = logging.getLogger('adyen')
 

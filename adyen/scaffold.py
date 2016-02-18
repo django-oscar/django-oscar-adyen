@@ -1,8 +1,11 @@
 from django.utils import timezone
+from oscar.core.loading import get_class
 
-from .facade import Facade
-from .gateway import Constants, MissingFieldException
 from .config import get_config
+
+Constants = get_class('adyen.gateway', 'Constants')
+Facade = get_class('adyen.facade', 'Facade')
+MissingFieldException = get_class('adyen.gateway', 'MissingFieldException')
 
 
 class Scaffold:

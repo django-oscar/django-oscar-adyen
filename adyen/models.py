@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from django.db import models
 from django.conf import settings
+from django.db import models
 from django.utils import timezone
+from oscar.core.loading import get_class
 
-from .gateway import Constants
+Constants = get_class('adyen.gateway', 'Constants')
 
 
 class AdyenTransaction(models.Model):
