@@ -1,7 +1,12 @@
-from django.test import override_settings, TestCase
+from django.test import TestCase, override_settings
+
 from adyen.facade import Facade
-from adyen.gateway import PaymentNotification, Constants, MissingFieldException, \
-    UnexpectedFieldException
+from adyen.gateway import (
+    Constants,
+    MissingFieldException,
+    PaymentNotification,
+    UnexpectedFieldException,
+)
 from tests import MockRequest
 
 

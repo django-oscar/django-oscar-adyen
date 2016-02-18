@@ -1,12 +1,11 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-
 from django.test import TestCase
 from django.test.utils import override_settings
 
 # We use get_config() instead of adyen_config because throughout
 # the tests, we repeatedly change the Django settings.
-from adyen.config import get_config, AbstractAdyenConfig
+from adyen.config import AbstractAdyenConfig, get_config
 from adyen.settings_config import FromSettingsConfig
 
 
@@ -60,5 +59,3 @@ class CustomConfigClassTestCase(TestCase):
         Check that we indeed ignore Django settings (apart from the config class).
         """
         assert get_config().get_action_url(None) == 'foo'
-
-

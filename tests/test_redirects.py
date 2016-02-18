@@ -1,11 +1,11 @@
 from copy import copy
+
 from django.test import TestCase
 
 from adyen.facade import Facade
-from adyen.gateway import MissingFieldException, InvalidTransactionException
+from adyen.gateway import InvalidTransactionException, MissingFieldException
 from adyen.models import AdyenTransaction
 from adyen.scaffold import Scaffold
-
 from tests import MockRequest
 from tests.test_notifications import AUTHORISED_PAYMENT_PARAMS_POST
 

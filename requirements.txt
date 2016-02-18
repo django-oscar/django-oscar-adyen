@@ -8,3 +8,5 @@ pytest-django
 pytest-flakes
 pytest-pep8
 pytest-sugar
+
+isort

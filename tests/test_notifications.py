@@ -2,7 +2,6 @@ from django.test import TestCase
 
 from adyen.gateway import Constants
 from adyen.scaffold import Scaffold
-
 from tests import MockRequest
 
 AUTHORISED_PAYMENT_PARAMS_POST = {

@@ -1,11 +1,9 @@
 from django.conf import settings
 from django.test import TestCase, override_settings
-
 from freezegun import freeze_time
 
 from adyen.gateway import MissingFieldException
 from adyen.scaffold import Scaffold
-
 
 TEST_RETURN_URL = 'https://www.example.com/checkout/return/adyen/'
 
