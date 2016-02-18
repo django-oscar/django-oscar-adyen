@@ -13,7 +13,7 @@ EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'currencyCode', 'value': 'EUR'},
     {'type': 'hidden', 'name': 'merchantAccount', 'value': settings.ADYEN_IDENTIFIER},
     {'type': 'hidden', 'name': 'merchantReference', 'value': '00000000123'},
-    {'type': 'hidden', 'name': 'merchantReturnData', 'value': 123},
+    {'type': 'hidden', 'name': 'merchantReturnData', 'value': '123'},
     {'type': 'hidden', 'name': 'merchantSig', 'value': 'kKvzRvx7wiPLrl8t8+owcmMuJZM='},
     {'type': 'hidden', 'name': 'paymentAmount', 'value': 123},
     {'type': 'hidden', 'name': 'resURL', 'value': TEST_RETURN_URL},

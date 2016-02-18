@@ -4,6 +4,7 @@ import iptools
 import logging
 
 from django.http import HttpResponse
+from django.utils.six.moves.urllib import parse
 
 from .gateway import Constants, Gateway, PaymentNotification, PaymentRedirection
 from .models import AdyenTransaction
@@ -76,22 +77,30 @@ class Facade:
         payment_method = details.get(Constants.PAYMENT_METHOD, '')
         psp_reference = details.get(Constants.PSP_REFERENCE, '')
 
-        # The payment amount is transmitted in a different parameter whether
-        # we are in the context of a PaymentRedirection (`merchantReturnData`)
-        # or a PaymentNotification (`value`). Both fields are mandatory in the
-        # respective context, ensuring we always get back our amount.
-        # This is, however, not generic in case of using the backend outside
-        # the oshop project, since it is our decision to store the amount in
-        # the `merchantReturnData` field. Leaving a TODO here to make this more
-        # generic at a later date.
-        amount = int(details.get(Constants.MERCHANT_RETURN_DATA, details.get(Constants.VALUE)))
-
-        return {
-            'amount': amount,
+        unpacked_details = {
             'order_number': order_number,
             'payment_method': payment_method,
             'psp_reference': psp_reference,
         }
+
+        # The payment amount is transmitted in a different parameter whether
+        # we are in the context of a PaymentRedirection (`merchantReturnData`)
+        # or a PaymentNotification (`value`). Both fields are mandatory in the
+        # respective context, ensuring we always get back our amount.
+        if Constants.MERCHANT_RETURN_DATA in details.keys():
+            return_data = details.get(Constants.MERCHANT_RETURN_DATA)
+            if '~' in return_data:
+                # If there was any client-supplied merchant return data, it was
+                # concatenated to the amount with a tilde.
+                (amount, user_data) = return_data.split('~', 1)
+                unpacked_details['amount'] = int(amount)
+                unpacked_details['merchant_return_data'] = parse.unquote_plus(user_data)
+            else:
+                unpacked_details['amount'] = int(return_data)
+        else:
+            unpacked_details['amount'] = int(details.get(Constants.VALUE))
+
+        return unpacked_details
 
     def _record_audit_trail(self, request, status, txn_details):
         """

@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.utils.six.moves.urllib import parse
 
 from .facade import Facade
 from .gateway import Constants, MissingFieldException
@@ -61,9 +62,6 @@ class Scaffold:
                 Constants.PAYMENT_AMOUNT: order_data['amount'],
                 Constants.SHOPPER_LOCALE: order_data['shopper_locale'],
                 Constants.COUNTRY_CODE: order_data['country_code'],
-                # Adyen does not provide the payment amount in the return URL, so we store it in
-                # this field to avoid a database query to get it back then.
-                Constants.MERCHANT_RETURN_DATA: order_data['amount'],
             }
 
         except KeyError:
@@ -74,6 +72,18 @@ class Scaffold:
         if return_url is not None:
             return_url = return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
             field_specs[Constants.MERCHANT_RETURN_URL] = return_url
+
+        # Adyen does not provide the payment amount in the return URL, so we store it in
+        # the merchantReturnData field to avoid a database query to get it back during
+        # postback.
+        # Any user-provided parameters are appended at the end of the amount, separated
+        # by a tilde.
+        merchant_return_data = str(order_data['amount'])
+        return_data = order_data.get('merchant_return_data', None)
+        if return_data:
+            merchant_return_data += "~%s" % parse.quote_plus(return_data.encode('utf-8'))
+
+        field_specs[Constants.MERCHANT_RETURN_DATA] = merchant_return_data
 
         return Facade().build_payment_form_fields(request, field_specs)
 
