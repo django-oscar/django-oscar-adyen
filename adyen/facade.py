@@ -74,29 +74,101 @@ class Facade:
 
         return ip_address
 
-    def _unpack_details(self, details):
-        """
-        Helper: extract data from the return value of `response.process`.
+    def unpack_details(self, details):
+        """Unpack detailed information from ``response.process()``
+
+        :param dict details: Dict that contains data from an Adyen
+            notification or when customer come back through the return URL.
+        :return: A dict with transaction details.
+
+        .. seealso::
+
+            :meth:`unpack_details_amount` can be overridden to extract the
+            transaction amount. Note that this plugin decided to use a field
+            for this purpose.
+
+            :meth:`unpack_merchant_return_data` can be overridden to extract
+            specific data from ``merchantReturnData``. This method is called
+            *after* any others and can be used to override the initial unpacked
+            details.
+
         """
         order_number = details.get(Constants.MERCHANT_REFERENCE, '')
         payment_method = details.get(Constants.PAYMENT_METHOD, '')
         psp_reference = details.get(Constants.PSP_REFERENCE, '')
+
+        unpacked_details = {
+            'order_number': order_number,
+            'payment_method': payment_method,
+            'psp_reference': psp_reference,
+            'amount': self.unpack_details_amount(details),
+        }
+
+        # Update details with merchant return data.
+        unpacked_details.update(
+            self.unpack_merchant_return_data(details))
+
+        return unpacked_details
+
+    def unpack_details_amount(self, details):
+        """Unpack amount from the Adyen response details.
+
+        :param dict details: Dict that contains data from an Adyen
+            notification or when customer come back through the return URL.
+        :return: None if amount is not available or an integer.
+
+        The payment amount is transmitted by the notification in the ``value``
+        field. However, in the case of a payment return URL, we do not have
+        this parameter.
+
+        We decided in ``Scaffold.get_field_merchant_return_data` to provide the
+        order's amount into this field, but this is not standard. As developers
+        may want to override this behavior, they can extend both part in order
+        to modify only the behavior of the field ``merchantReturnData``, and
+        they can override this method to fetch amount in their own way.
+        """
+        value = details.get(Constants.VALUE)
 
         # The payment amount is transmitted in a different parameter whether
         # we are in the context of a PaymentRedirection (`merchantReturnData`)
         # or a PaymentNotification (`value`). Both fields are mandatory in the
         # respective context, ensuring we always get back our amount.
         # This is, however, not generic in case of using the backend outside
-        # the oshop project, since it is our decision to store the amount in
-        # the `merchantReturnData` field. Leaving a TODO here to make this more
-        # generic at a later date.
-        amount = int(details.get(Constants.MERCHANT_RETURN_DATA, details.get(Constants.VALUE)))
+        # the Oscaro Shop project, since it is our decision to store the amount
+        # in the `merchantReturnData` field.
+        # This is kept for backward compatible reason.
+        amount = details.get(Constants.MERCHANT_RETURN_DATA, value)
 
+        if amount is not None:
+            return int(amount)
+
+        return None
+
+    def unpack_merchant_return_data(self, details):
+        """Unpack merchant return data fields from the ``details``.
+
+        :param dict details: Dict that contains data from an Adyen
+            notification or when customer come back through the return URL.
+        :return: A dict of extra details to unpack that handle custom fields.
+
+        The return dict is supposed to contain the ``merchant_return_data``,
+        which is by default the raw content of the field
+        ``merchantReturnData``.
+
+        Developers may want to override the meaning of this field and extract
+        various other information.
+
+        .. note::
+
+            The result of this method will override any existing key extracted
+            in :meth:`unpack_details`. It is powerful yet it could be dangerous
+            if not handled with care.
+
+        """
+        merchant_return_data = details.get(
+            Constants.MERCHANT_RETURN_DATA, None)
         return {
-            'amount': amount,
-            'order_number': order_number,
-            'payment_method': payment_method,
-            'psp_reference': psp_reference,
+            'merchant_return_data': merchant_return_data
         }
 
     def _record_audit_trail(self, request, status, txn_details):
@@ -172,7 +244,7 @@ class Facade:
 
         # Then, we can extract the received data...
         success, status, details = response.process()
-        txn_details = self._unpack_details(details)
+        txn_details = self.unpack_details(details)
 
         # ... and record the audit trail.
         self._record_audit_trail(request, status, txn_details)
