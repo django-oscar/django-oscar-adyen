@@ -43,6 +43,10 @@ class Scaffold:
         Return the payment form fields as a list of dicts.
         Expects a large-ish order_data dictionary with details of the order.
         """
+        field_specs = self.get_field_specs(request, order_data)
+        return Facade().build_payment_form_fields(request, field_specs)
+
+    def get_field_specs(self, request, order_data):
         now = timezone.now()
         session_validity = now + timezone.timedelta(minutes=20)
         session_validity_format = '%Y-%m-%dT%H:%M:%SZ'
@@ -64,21 +68,34 @@ class Scaffold:
                 Constants.PAYMENT_AMOUNT: order_data['amount'],
                 Constants.SHOPPER_LOCALE: order_data['shopper_locale'],
                 Constants.COUNTRY_CODE: order_data['country_code'],
-                # Adyen does not provide the payment amount in the return URL, so we store it in
-                # this field to avoid a database query to get it back then.
-                Constants.MERCHANT_RETURN_DATA: order_data['amount'],
             }
-
         except KeyError:
-            raise MissingFieldException("One or more fields are missing from the order data.")
+            raise MissingFieldException(
+                "One or more fields are missing from the order data.")
 
-        # Check for overridden return URL.
-        return_url = order_data.get('return_url', None)
+        custom_data = self.get_field_merchant_return_data(request, order_data)
+        if custom_data is not None:
+            field_specs[Constants.MERCHANT_RETURN_DATA] = custom_data
+
+        return_url = self.get_field_return_url(request, order_data)
         if return_url is not None:
-            return_url = return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
             field_specs[Constants.MERCHANT_RETURN_URL] = return_url
 
-        return Facade().build_payment_form_fields(request, field_specs)
+        return field_specs
+
+    def get_field_merchant_return_data(self, request, order_data):
+        # Adyen does not provide the payment amount in the return URL, so we
+        # store it in this field to avoid a database query to get it back then.
+        return order_data['amount']
+
+    def get_field_return_url(self, request, order_data):
+        # Check for overridden return URL.
+        return_url = order_data.get('return_url', None)
+
+        if not return_url:
+            return None
+
+        return return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
 
     def _normalize_feedback(self, feedback):
         """
