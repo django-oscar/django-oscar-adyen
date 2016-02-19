@@ -9,7 +9,23 @@ MissingFieldException = get_class('adyen.gateway', 'MissingFieldException')
 
 
 class Scaffold:
+    """Entry point to handle Adyen HPP.
 
+    The ``Scaffold`` exposes an interface that can be used in any Django Oscar
+    application. It aims to hide the inner complexity of payment form
+    management and payment notification processing.
+
+    The key methods are:
+
+    * :meth:`get_form_action` and `get_form_fields` to build the Adyen HPP
+      request submission form,
+    * :meth:`handle_payment_return` to handle customer coming back from the
+      Adyen HPP after a payment (successful or not)
+    * :meth:`assess_notification_relevance`,
+      :meth:`handle_payment_notification` and
+      :meth:`build_notification_response` to handle Adyen Payment Notification.
+
+    """
     # These are the constants that all scaffolds are expected to return
     # to a multi-psp application. They might look like those actually returned
     # by the psp itself, but that would be a pure coincidence.
@@ -33,6 +49,15 @@ class Scaffold:
 
     def __init__(self):
         self.config = get_config()
+
+    def _normalize_feedback(self, feedback):
+        """
+        Convert the facade feedback to a standardized one,
+        common to all payment provider backends.
+        """
+        success, adyen_status, details = feedback
+        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES[adyen_status]
+        return success, common_status, details
 
     def get_form_action(self, request):
         """ Return the URL where the payment form should be submitted. """
@@ -97,15 +122,6 @@ class Scaffold:
 
         return return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
 
-    def _normalize_feedback(self, feedback):
-        """
-        Convert the facade feedback to a standardized one,
-        common to all payment provider backends.
-        """
-        success, adyen_status, details = feedback
-        common_status = self.ADYEN_TO_COMMON_PAYMENT_STATUSES[adyen_status]
-        return success, common_status, details
-
     def handle_payment_feedback(self, request):
         """Handle payment feedback from return URL or POST notification.
 
@@ -121,6 +137,11 @@ class Scaffold:
             :meth:`handle_payment_notification` and
             :meth:`handle_payment_return` to see how to handle both cases.
 
+        .. deprecated:: 0.6.0
+
+            This method is deprecated in favor of more specific methods and
+            should not be used in plugin user's code anymore.
+
         """
         if request.method == 'POST':
             return self.handle_payment_notification(request)
@@ -128,17 +149,81 @@ class Scaffold:
         return self.handle_payment_return(request)
 
     def handle_payment_return(self, request):
+        """Handle payment return.
+
+        :param request: Django HTTP request object
+        :return: A 3-values tuple with ``success``, ``status`` and ``details``.
+
+        One should call this method when handling the GET request that come
+        after a redirection from Adyen.
+
+        .. versionadded:: 0.6.0
+
+            This method has been added to replace the generic
+            :meth:`handle_payment_feedback`.
+
+        """
         facade = Facade()
         result = facade.handle_payment_return(request)
         return self._normalize_feedback(result)
 
     def handle_payment_notification(self, request):
+        """Handle payment notification.
+
+        :param request: Django HTTP request object
+        :return: A 3-values tuple with ``success``, ``status`` and ``details``.
+
+        One should call this method when handling the POST request that come
+        as an Adyen Payment Notification.
+
+        .. versionadded:: 0.6.0
+
+            This method has been added to replace the generic
+            :meth:`handle_payment_feedback`.
+
+        """
         facade = Facade()
         result = facade.handle_payment_notification(request)
         return self._normalize_feedback(result)
 
     def assess_notification_relevance(self, request):
+        """Assess if a notification request is relevant.
+
+        :param request: Django HTTP request object.
+        :return: A 2-value tuple as ``must_process`` and ``must_acknowledge``
+
+        One should call this method when receiving a notification request and
+        they want to know if the notification must:
+
+        1. Be processed, ie. is a call to :meth:`handle_payment` is relevant,
+        2. Be acknowledged with a response to Adyen, using
+           :meth:`build_notification_response`
+
+        .. versionadded:: 0.6.0
+
+            This method has been added to replace the generic
+            :meth:`handle_payment_feedback`.
+
+        """
         return Facade().assess_notification_relevance(request)
 
     def build_notification_response(self, request):
+        """Build a notification response for an Adyen Payment Notification
+
+        :param request: Django HTTP request object.
+        :return: A Django HTTP Response object.
+
+        From the ``Adyen Integration Manual``:
+
+            The Adyen notification system requires a response within 30 seconds
+            of receipt of the notification, the server is expecting a response
+            of ``[accepted]``, including the brackets. When our systems receive
+            this response all notifications contained in the message are marked
+            as successfully sent."
+
+        This method simply call the
+        :method:`adyen.facade.Facade.build_notification_response` method and
+        returns its result.
+
+        """
         return Facade().build_notification_response(request)
