@@ -195,6 +195,7 @@ class Facade:
             # not prevent the rest of the process.
             logger.exception("Unable to record audit trail for transaction "
                              "with reference %s", reference)
+            return
 
         # If we received a PaymentNotification via a POST request, we cannot
         # accurately record the origin IP address. It will, however, be made
@@ -217,26 +218,61 @@ class Facade:
 
                 pass
 
-    def handle_payment_feedback(self, request):
-        """
-        Validate, process, optionally record audit trail and provide feedback
-        about the current payment response.
-        """
-        # We must first find out whether this is a redirection or a notification.
+    def handle_payment_return(self, request):
+        """Handle payment return.
 
+        :param request: Django HTTP request (GET)
+
+        This method should be called when customers come back from the Adyen
+        HPP (through a ``GET`` request). It instantiate the gateway and the
+        appropriate response object and pass it to
+        :meth:`process_payment_feedback` to return a result.
+        """
+        gateway = get_gateway(request, self.config)
+        response = PaymentRedirection(gateway, request.GET)
+        return self.process_payment_feedback(request, response)
+
+    def handle_payment_notification(self, request):
+        """Handle payment notification.
+
+        :param request: Django HTTP request (POST)
+
+        This method should be called when Adyen send its Payment Notification
+        (through a ``POST`` request). It instantiate the gateway and the
+        appropriate response object and pass it to
+        :meth:`process_payment_feedback` to return a result.
+        """
+        gateway = get_gateway(request, self.config)
+        response = PaymentNotification(gateway, request.POST)
+        return self.process_payment_feedback(request, response)
+
+    def handle_payment_feedback(self, request):
+        """Handle payment feedback (payment return or payment notification).
+
+        .. deprecated:: 0.6.0
+
+            This method is not used internally anymore by the plugin. If you
+            rely on that please switch to :meth:`handle_payment_return`,
+            :meth:`handle_payment_notification`, and
+            :meth:`process_payment_feedback`.
+
+        """
         if request.method == 'GET':
-            params = request.GET
-            response_class = PaymentRedirection
+            return self.handle_payment_return(request)
         elif request.method == 'POST':
-            params = request.POST
-            response_class = PaymentNotification
+            return self.handle_payment_notification(request)
         else:
             raise RuntimeError("Only GET and POST requests are supported.")
 
-        # Then we can instantiate the appropriate class from the gateway.
-        gateway = get_gateway(request, self.config)
-        response = response_class(gateway, params)
+    def process_payment_feedback(self, request, response):
+        """Process payment feedback response.
 
+        :param request: Django HTTP request object
+        :param response: Adyen payment response
+
+        Validate, process, optionally record audit trail and provide feedback
+        about the current payment response.
+        """
         # Note that this may raise an exception if the response is invalid.
         # For example: MissingFieldException, UnexpectedFieldException, ...
         # The code "above" should be prepared to deal with it accordingly.

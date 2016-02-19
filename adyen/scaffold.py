@@ -107,7 +107,35 @@ class Scaffold:
         return success, common_status, details
 
     def handle_payment_feedback(self, request):
-        return self._normalize_feedback(Facade().handle_payment_feedback(request))
+        """Handle payment feedback from return URL or POST notification.
+
+        :param request: Django HTTP request object.
+        :return: A normalized payment feedback.
+
+        If the ``request.method`` is ``POST``, this method consider we handle
+        an Adyen Payment Notification. Otherwise it considers it is a simple
+        Payment Return case.
+
+        .. seealso::
+
+            :meth:`handle_payment_notification` and
+            :meth:`handle_payment_return` to see how to handle both cases.
+
+        """
+        if request.method == 'POST':
+            return self.handle_payment_notification(request)
+
+        return self.handle_payment_return(request)
+
+    def handle_payment_return(self, request):
+        facade = Facade()
+        result = facade.handle_payment_return(request)
+        return self._normalize_feedback(result)
+
+    def handle_payment_notification(self, request):
+        facade = Facade()
+        result = facade.handle_payment_notification(request)
+        return self._normalize_feedback(result)
 
     def assess_notification_relevance(self, request):
         return Facade().assess_notification_relevance(request)
