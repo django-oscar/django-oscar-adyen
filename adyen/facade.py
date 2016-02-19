@@ -74,6 +74,38 @@ class Facade:
 
         return ip_address
 
+    def build_payment_return(self, request):
+        """Build a Payment Return response object from raw request.
+
+        :param request: Django HTTP request object
+        :return: A :class:`~adyen.gateway.PaymentRedirection` object
+
+        This method get the gateway for the ``request`` and :attr:`config`
+        and instantiate a :class:`~adyen.gateway.PaymentRedirection` with this
+        gateway and the ``request.GET`` parameters.
+
+        Plugin users may want to override this method to build any user-made
+        object to handle their own specific cases.
+        """
+        gateway = get_gateway(request, self.config)
+        return PaymentRedirection(gateway, request.GET)
+
+    def build_payment_notification(self, request):
+        """Build a Payment Notification response object from raw request.
+
+        :param request: Django HTTP request object
+        :return: A :class:`~adyen.gateway.PaymentNotification` object
+
+        This method get the gateway for the ``request`` and :attr:`config`
+        and instantiate a :class:`~adyen.gateway.PaymentNotification` with this
+        gateway and the ``request.POST`` parameters.
+
+        Plugin users may want to override this method to build any user-made
+        object to handle their own specific cases.
+        """
+        gateway = get_gateway(request, self.config)
+        return PaymentNotification(gateway, request.POST)
+
     def unpack_details(self, details):
         """Unpack detailed information from ``response.process()``
 
@@ -228,8 +260,7 @@ class Facade:
         appropriate response object and pass it to
         :meth:`process_payment_feedback` to return a result.
         """
-        gateway = get_gateway(request, self.config)
-        response = PaymentRedirection(gateway, request.GET)
+        response = self.build_payment_return(request)
         return self.process_payment_feedback(request, response)
 
     def handle_payment_notification(self, request):
@@ -242,8 +273,7 @@ class Facade:
         appropriate response object and pass it to
         :meth:`process_payment_feedback` to return a result.
         """
-        gateway = get_gateway(request, self.config)
-        response = PaymentNotification(gateway, request.POST)
+        response = self.build_payment_notification(request)
         return self.process_payment_feedback(request, response)
 
     def handle_payment_feedback(self, request):
