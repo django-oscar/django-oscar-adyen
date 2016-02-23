@@ -294,15 +294,17 @@ class BaseResponse(BaseInteraction):
 
 
 class PaymentNotification(BaseResponse):
-    """
-    Class used to process payment notifications (HTTPS POST from Adyen to our servers).
+    """Process payment notifications (HTTPS POST from Adyen to our servers).
 
-    Payment notifications can have multiple fields. They fall into four categories:
+    Payment notifications can have multiple fields. They fall into four
+    categories:
+
     - required: Must be included.
     - optional: Can be included.
-    - additional data: Can be included. Format is 'additionalData.VALUE' and we don't need the
-                       data at the moment, so it's ignored.
+    - additional data: Can be included. Format is 'additionalData.VALUE' and
+      we don't need the data at the moment, so it's ignored.
     - unexpected: We loudly complain.
+
     """
     REQUIRED_FIELDS = (
         Constants.CURRENCY,
@@ -350,9 +352,10 @@ class PaymentNotification(BaseResponse):
 
 
 class PaymentRedirection(BaseResponse):
-    """
-    Class used to process payment notifications from the user; when they paid on Adyen
-    and get redirected back to our site. HTTP GET from user's browser.
+    """Process payment feedback from the user
+
+    When they paid on Adyen and get redirected back to our site. HTTP GET from
+    user's browser.
     """
     REQUIRED_FIELDS = (
         Constants.AUTH_RESULT,

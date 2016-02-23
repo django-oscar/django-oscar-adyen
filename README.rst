@@ -70,6 +70,18 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 Changes
 =======
 
+0.6.0 - WIP
+-----------
+
+- Allow plugin user to extend it with `get_class`,
+- Split several methods in order to override specific parts of the plugin,
+- Expose more methods as public methods to allow plugin user to override more
+  specific parts of the plugin,
+- Add deprecation note on `handle_payment_feedback` and add two separates
+  methods to handle payment return case and payment notification case.
+
+This version is backward compatible with version 0.5.0
+
 0.5.0 - released October 7th, 2015
 ----------------------------------
 - Add support for Adyen's `ERROR` and `PENDING` payment statuses

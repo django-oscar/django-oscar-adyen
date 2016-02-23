@@ -5,38 +5,63 @@ from .config import AbstractAdyenConfig
 
 
 class FromSettingsConfig(AbstractAdyenConfig):
-    """
-    This config class is enabled by default and useful in simple deployments.
-    One can just set all needed values in the Django settings. It also
-    exists for backwards-compatibility with previous deployments.
-    """
+    """Manage Plugin's configuration from the project's settings.
 
+    It gets all information required by the plugin from the project's settings,
+    and can be used as a base class for specific cases.
+
+    The expected settings are:
+
+    * :data:`ADYEN_IDENTIFIER`
+    * :data:`ADYEN_ACTION_URL`
+    * :data:`ADYEN_SKIN_CODE`
+    * :data:`ADYEN_SECRET_KEY`
+
+    """
     def __init__(self):
-        """
+        """Initialize configuration and check project's settings.
+
         We complain as early as possible when Django settings are missing.
         """
         required_settings = [
-            'ADYEN_IDENTIFIER', 'ADYEN_ACTION_URL', 'ADYEN_SKIN_CODE', 'ADYEN_SECRET_KEY']
+            'ADYEN_IDENTIFIER',
+            'ADYEN_ACTION_URL',
+            'ADYEN_SKIN_CODE',
+            'ADYEN_SECRET_KEY']
+
         missing_settings = [
-            setting for setting in required_settings if not hasattr(settings, setting)]
+            setting
+            for setting in required_settings
+            if not hasattr(settings, setting)]
+
         if missing_settings:
             raise ImproperlyConfigured(
-                "You are using the FromSettingsConfig config class, but haven't set the "
-                "the following required settings: %s" % missing_settings)
+                "You are using the FromSettingsConfig config class, "
+                "but haven't set the the following required settings: %s"
+                % missing_settings)
 
     def get_identifier(self, request):
+        """Return :data:`ADYEN_IDENTIFIER`."""
         return settings.ADYEN_IDENTIFIER
 
     def get_action_url(self, request):
+        """Return :data:`ADYEN_ACTION_URL`."""
         return settings.ADYEN_ACTION_URL
 
     def get_skin_code(self, request):
+        """Return :data:`ADYEN_SKIN_CODE`."""
         return settings.ADYEN_SKIN_CODE
 
     def get_skin_secret(self, request):
+        """Return :data:`ADYEN_SECRET_KEY`."""
         return settings.ADYEN_SECRET_KEY
 
     def get_ip_address_header(self):
+        """Return :data:`ADYEN_IP_ADDRESS_HTTP_HEADER` or ``REMOTE_ADDR``.
+
+        If the setting is not configured, the default value ``REMOTE_ADDR`` is
+        returned instead.
+        """
         try:
             return settings.ADYEN_IP_ADDRESS_HTTP_HEADER
         except AttributeError:

@@ -222,8 +222,7 @@ class Scaffold:
             as successfully sent."
 
         This method simply call the
-        :method:`adyen.facade.Facade.build_notification_response` method and
+        :meth:`adyen.facade.Facade.build_notification_response` method and
         returns its result.
-
         """
         return Facade().build_notification_response(request)

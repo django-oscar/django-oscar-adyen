@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-oscar-adyen',
-    version='0.5.0',
+    version='0.6.0.dev0',
     url='https://github.com/oscaro/django-oscar-adyen',
     author='Oscaro',
-    description='Adyen payment module for django-oscar',
+    description='Adyen HPP payment module for django-oscar',
     long_description=open('README.rst').read(),
     keywords='payment, django, oscar, adyen',
     license='BSD',
