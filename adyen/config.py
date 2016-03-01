@@ -78,7 +78,7 @@ class AbstractAdyenConfig:
         :param request: Django HTTP request object.
         :return: List (or tuple) of allowed payment methods.
 
-        .. versionadded: 0.6.0
+        .. versionadded:: 0.6.0
 
             Make sure to implement this method when using this new version.
 

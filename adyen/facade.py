@@ -19,6 +19,21 @@ logger = logging.getLogger('adyen')
 
 
 def get_gateway(request, config):
+    """Instantiate a :class:`adyen.gateway.Gateway` from ``config``.
+
+    :param request: Django HTTP request object.
+    :param config: Adyen Config object.
+    :type config: :class:`~adyen.config.AbstractAdyenConfig`
+    :return: An instance of ``Gateway`` configured properly.
+
+    The ``Gateway`` is built using the given ``config`` and ``request`` to get
+    specific values for ``identifier``, ``secret_key`` and ``action_url``.
+
+    The configuration object requires the ``request`` in order to allow plugin
+    user to define a per-request configuration, such as a different secret key
+    based on the country or the language (or even the type of customer, its
+    IP address, or other request specific parameter).
+    """
     return Gateway({
         Constants.IDENTIFIER: config.get_identifier(request),
         Constants.SECRET_KEY: config.get_skin_secret(request),
@@ -27,7 +42,28 @@ def get_gateway(request, config):
 
 
 class Facade:
+    """Facade used to expose the public behavior of the Adyen gateway.
 
+    The ``Facade`` class exposes a set of public methods to be used by the
+    plugin internally and by plugin users without having to deal with Adyen
+    internal mecanism (such as how to sign a request form or how to read a
+    payment response).
+
+    The first entry point is the payment form:
+
+    * :meth:`build_payment_form_fields` to handle payment data and generate
+      the payment request form used to submit a payment request to Adyen HPP.
+
+    Then payment processing entry points of the ``Facade`` are:
+
+    * :meth:`handle_payment_return` to handle payment return data,
+    * :meth:`handle_payment_notification` to handle payment standard
+      notifications.
+
+    These methods will build an appropriate Adyen Payment Response object and
+    call the :meth:`process_payment_feedback` method to handle the payment
+    feedback.
+    """
     def __init__(self):
         self.config = get_config()
 
@@ -153,11 +189,12 @@ class Facade:
         field. However, in the case of a payment return URL, we do not have
         this parameter.
 
-        We decided in ``Scaffold.get_field_merchant_return_data` to provide the
-        order's amount into this field, but this is not standard. As developers
-        may want to override this behavior, they can extend both part in order
-        to modify only the behavior of the field ``merchantReturnData``, and
-        they can override this method to fetch amount in their own way.
+        We decided in ``Scaffold.get_field_merchant_return_data`` to provide
+        the order's amount into this field, but this is not standard. As
+        developers may want to override this behavior, they can extend both
+        part in order to modify only the behavior of the field
+        ``merchantReturnData``, and they can override this method to fetch
+        amount in their own way.
         """
         value = details.get(Constants.VALUE)
 

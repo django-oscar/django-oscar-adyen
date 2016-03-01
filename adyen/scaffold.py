@@ -38,7 +38,7 @@ class Scaffold:
     PAYMENT_STATUS_ERROR = 'ERROR'
     PAYMENT_STATUS_PENDING = 'PENDING'
 
-    # This is the mapping between Adyen-specific and these standard statuses
+    #: This is the mapping between Adyen-specific and these standard statuses
     ADYEN_TO_COMMON_PAYMENT_STATUSES = {
         Constants.PAYMENT_RESULT_AUTHORISED: PAYMENT_STATUS_ACCEPTED,
         Constants.PAYMENT_RESULT_CANCELLED: PAYMENT_STATUS_CANCELLED,
@@ -129,9 +129,23 @@ class Scaffold:
         If a ``source_type`` is available into the provided ``order_data``,
         then it is used as a parameter to
         :meth:`adyen.config.AbstractAdyenConfig.get_allowed_methods`.
+
+        .. versionadded:: 0.6.0
+
+            Added to handle ``allowedMethods`` field. May require extra work
+            on the configuration object to work properly.
+
         """
         source_type = order_data.get('source_type', None)
-        allowed_methods = self.config.get_allowed_methods(request, source_type)
+
+        try:
+            allowed_methods = self.config.get_allowed_methods(request,
+                                                              source_type)
+        except NotImplementedError:
+            # New in version 0.6.0: this may not work properly with existing
+            # application using this plugin. We make sure not to break here
+            # and keep this plugin backward-compatible with version 0.5.
+            return None
 
         if not allowed_methods:
             return None

@@ -50,7 +50,7 @@ Edit your ``settings.py`` to set the following settings:
    defined in the Adyen interface. If not defined, customers will select a
    payment method on the HPP without restriction.
 
-   .. versionadded: 0.6.0
+   .. versionadded:: 0.6.0
 
 
 You will likely need to specify different settings in your test environment
