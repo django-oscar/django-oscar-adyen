@@ -72,8 +72,8 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 Changes
 =======
 
-0.6.0 - WIP
------------
+0.6.0 - released March 1st, 2016
+--------------------------------
 
 - Allow plugin user to extend it with `get_class`,
 - Split several methods in order to override specific parts of the plugin,
