@@ -1,6 +1,9 @@
+import unittest
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
+from django.test.client import RequestFactory
 from django.test.utils import override_settings
 
 # We use get_config() instead of adyen_config because throughout
@@ -9,13 +12,50 @@ from adyen.config import AbstractAdyenConfig, get_config
 from adyen.settings_config import FromSettingsConfig
 
 
+class TestAbstractAdyenConfig(unittest.TestCase):
+    def test_get_identifier(self):
+        request = RequestFactory()
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_identifier(request)
+
+    def test_get_action_url(self):
+        request = RequestFactory()
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_action_url(request)
+
+    def test_get_skin_code(self):
+        request = RequestFactory()
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_skin_code(request)
+
+    def test_get_skin_secret(self):
+        request = RequestFactory()
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_skin_secret(request)
+
+    def test_get_ip_address_header(self):
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_ip_address_header()
+
+    def test_get_allowed_methods(self):
+        request = RequestFactory()
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_allowed_methods(request, source_type=None)
+
+
 @override_settings(
     ADYEN_IDENTIFIER='foo',
     ADYEN_SECRET_KEY='foo',
     ADYEN_ACTION_URL='foo',
     ADYEN_SKIN_CODE='foo',
 )
-class FromSettingsTestCase(TestCase):
+class TestFromSettings(TestCase):
     """
     This test case tests the FromSettings config class, which just fetches its
     values from the Django settings.
@@ -35,6 +75,27 @@ class FromSettingsTestCase(TestCase):
         del settings.ADYEN_ACTION_URL
         with self.assertRaises(ImproperlyConfigured):
             get_config()
+
+    def test_get_ip_address_header_default(self):
+        config = get_config()
+        assert config.get_ip_address_header() == 'REMOTE_ADDR'
+
+    @override_settings(ADYEN_IP_ADDRESS_HTTP_HEADER='X_FORWARDED_FOR')
+    def test_get_ip_address_header_by_settings(self):
+        config = get_config()
+        assert config.get_ip_address_header() == 'X_FORWARDED_FOR'
+
+    def test_get_allowed_methods_default(self):
+        config = get_config()
+        request = RequestFactory()
+        assert config.get_allowed_methods(request, None) is None
+
+    @override_settings(ADYEN_ALLOWED_METHODS=('card', 'bankTransfer'))
+    def test_get_allowed_methods_by_settings(self):
+        config = get_config()
+        request = RequestFactory()
+        expected = ('card', 'bankTransfer')
+        assert config.get_allowed_methods(request, None) == expected
 
 
 class DummyConfigClass(AbstractAdyenConfig):

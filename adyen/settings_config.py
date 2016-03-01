@@ -66,3 +66,22 @@ class FromSettingsConfig(AbstractAdyenConfig):
             return settings.ADYEN_IP_ADDRESS_HTTP_HEADER
         except AttributeError:
             return 'REMOTE_ADDR'
+
+    def get_allowed_methods(self, request, source_type=None):
+        """Return :data:`ADYEN_ALLOWED_METHODS` or ``None``.
+
+        :param request: Django HTTP request object.
+        :param source_type: A ``SourceType`` object or ``None``.
+
+        If the setting is not configured, the default value ``None`` is
+        returned instead. It means the application does not specify any allowed
+        methods so customers can select a payment methods on the Adyen HPP
+        itself.
+
+        Note that both ``request`` and ``source_type`` parameters are ignored
+        and only the setting matters.
+        """
+        try:
+            return settings.ADYEN_ALLOWED_METHODS
+        except AttributeError:
+            return None

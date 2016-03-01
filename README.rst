@@ -37,6 +37,7 @@ Add ``'adyen'`` to ``INSTALLED_APPS`` and run::
 
 to create the appropriate database tables.
 
+
 Configuration
 =============
 
@@ -67,6 +68,7 @@ the request. That is not easily implemented with Django settings, so you can alt
 set ``ADYEN_CONFIG_CLASS`` to a config class of your own.
 See `adyen.settings_config.FromSettingsConfig` for an example.
 
+
 Changes
 =======
 
@@ -79,8 +81,13 @@ Changes
   specific parts of the plugin,
 - Add deprecation note on `handle_payment_feedback` and add two separates
   methods to handle payment return case and payment notification case.
+- Add `allowedMethods` to the payment request form (unused by default).
+- Start a sphinx documentation for the project.
 
-This version is backward compatible with version 0.5.0
+This version is backward compatible with version 0.5.0.
+
+Note that plugin users need to implement method `get_allowed_methods` if they
+uses their own config class from the abstract config class.
 
 0.5.0 - released October 7th, 2015
 ----------------------------------

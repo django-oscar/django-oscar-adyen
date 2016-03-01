@@ -98,6 +98,10 @@ class Scaffold:
             raise MissingFieldException(
                 "One or more fields are missing from the order data.")
 
+        allowed_methods = self.get_field_allowed_methods(request, order_data)
+        if allowed_methods is not None:
+            field_specs[Constants.ALLOWED_METHODS] = allowed_methods
+
         custom_data = self.get_field_merchant_return_data(request, order_data)
         if custom_data is not None:
             field_specs[Constants.MERCHANT_RETURN_DATA] = custom_data
@@ -107,6 +111,32 @@ class Scaffold:
             field_specs[Constants.MERCHANT_RETURN_URL] = return_url
 
         return field_specs
+
+    def get_field_allowed_methods(self, request, order_data):
+        """Get a string of comma separated allowed payment methods.
+
+        :param request: Django HTTP request object.
+        :param dict order_data: Order's data.
+        :return: If defined by the configuration, a string composed of a list
+            of comma separated payment methods (ex. ``card,bankTransfert``).
+            Otherwise ``None``.
+
+        This methods is used to populate the ``allowedMethods`` field of the
+        payment request form. See `Adyen HPP manual`__ for more information.
+
+        .. __: https://docs.adyen.com/manuals/hpp-manual/hosted-payment-pages/hpp-payment-methods
+
+        If a ``source_type`` is available into the provided ``order_data``,
+        then it is used as a parameter to
+        :meth:`adyen.config.AbstractAdyenConfig.get_allowed_methods`.
+        """
+        source_type = order_data.get('source_type', None)
+        allowed_methods = self.config.get_allowed_methods(request, source_type)
+
+        if not allowed_methods:
+            return None
+
+        return ','.join(method.strip() for method in allowed_methods)
 
     def get_field_merchant_return_data(self, request, order_data):
         # Adyen does not provide the payment amount in the return URL, so we
