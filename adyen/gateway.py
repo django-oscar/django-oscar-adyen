@@ -1,96 +1,14 @@
-# -*- coding: utf-8 -*-
-
-import base64
-import hashlib
-import hmac
 import logging
 
+from .constants import Constants
+from .exceptions import (
+    InvalidTransactionException,
+    MissingFieldException,
+    MissingParameterException,
+    UnexpectedFieldException,
+)
+
 logger = logging.getLogger('adyen')
-
-
-# ---[ CONSTANTS ]---
-
-class Constants:
-
-    ACCEPTED_NOTIFICATION = '[accepted]'
-
-    ACTION_URL = 'action_url'
-    ADYEN = 'adyen'
-    ALLOWED_METHODS = 'allowedMethods'
-    AUTH_RESULT = 'authResult'
-    BILLING_ADDRESS_TYPE = 'billingAddressType'
-    BLOCKED_METHODS = 'blockedMethods'
-    COUNTRY_CODE = 'countryCode'
-    CURRENCY = 'currency'
-    CURRENCY_CODE = 'currencyCode'
-    DELIVERY_ADDRESS_TYPE = 'deliveryAddressType'
-
-    EVENT_CODE = 'eventCode'
-    EVENT_CODE_AUTHORISATION = 'AUTHORISATION'
-    EVENT_DATE = 'eventDate'
-
-    FALSE = 'false'
-    IDENTIFIER = 'identifier'
-    LIVE = 'live'
-
-    MERCHANT_ACCOUNT = 'merchantAccount'
-    MERCHANT_ACCOUNT_CODE = 'merchantAccountCode'
-    MERCHANT_REFERENCE = 'merchantReference'
-    MERCHANT_RETURN_DATA = 'merchantReturnData'
-    MERCHANT_RETURN_URL = 'resURL'
-    MERCHANT_SIG = 'merchantSig'
-
-    OFFSET = 'offset'
-    OPERATIONS = 'operations'
-    ORIGINAL_REFERENCE = 'originalReference'
-
-    PAYMENT_AMOUNT = 'paymentAmount'
-    PAYMENT_METHOD = 'paymentMethod'
-    PAYMENT_RESULT_AUTHORISED = 'AUTHORISED'
-    PAYMENT_RESULT_REFUSED = 'REFUSED'
-    PAYMENT_RESULT_CANCELLED = 'CANCELLED'
-    PAYMENT_RESULT_PENDING = 'PENDING'
-    PAYMENT_RESULT_ERROR = 'ERROR'
-
-    PSP_REFERENCE = 'pspReference'
-    TEST_REFERENCE_PREFIX = 'test_AUTHORISATION'
-    REASON = 'reason'
-    RECURRING_CONTRACT = 'recurringContract'
-    SECRET_KEY = 'secret_key'
-    SEPARATOR = ':'
-    SESSION_VALIDITY = 'sessionValidity'
-    SKIN_CODE = 'skinCode'
-    SHIP_BEFORE_DATE = 'shipBeforeDate'
-    ADDITIONAL_DATA_PREFIX = 'additionalData.'
-
-    SHOPPER_EMAIL = 'shopperEmail'
-    SHOPPER_LOCALE = 'shopperLocale'
-    SHOPPER_REFERENCE = 'shopperReference'
-    SHOPPER_STATEMENT = 'shopperStatement'
-    SHOPPER_TYPE = 'shopperType'
-
-    SUCCESS = 'success'
-    TEST = 'test'
-    TRUE = 'true'
-    VALUE = 'value'
-
-
-# ---[ EXCEPTIONS ]---
-
-class MissingParameterException(ValueError):
-    pass
-
-
-class MissingFieldException(ValueError):
-    pass
-
-
-class UnexpectedFieldException(ValueError):
-    pass
-
-
-class InvalidTransactionException(ValueError):
-    pass
 
 
 # ---[ GATEWAY ]---
@@ -101,6 +19,7 @@ class Gateway:
         Constants.IDENTIFIER,
         Constants.SECRET_KEY,
         Constants.ACTION_URL,
+        Constants.SIGNER,
     )
 
     def __init__(self, settings=None):
@@ -110,58 +29,17 @@ class Gateway:
         if settings is None:
             settings = {}
 
+        if any(key not in settings for key in self.MANDATORY_SETTINGS):
+            raise MissingParameterException(
+                "You need to specify the following parameters to initialize "
+                "the Adyen gateway: %s. "
+                "Please check your configuration."
+                % ', '.join(self.MANDATORY_SETTINGS))
+
         self.identifier = settings.get(Constants.IDENTIFIER)
         self.secret_key = settings.get(Constants.SECRET_KEY)
         self.action_url = settings.get(Constants.ACTION_URL)
-
-        if self.identifier is None or self.secret_key is None or self.action_url is None:
-            raise MissingParameterException(
-                "You need to specify the following parameters to initialize "
-                "the Adyen gateway: identifier, secret_key, action_url. "
-                "Please check your configuration."
-            )
-
-    def _compute_hash(self, keys, params):
-        """
-        Compute a validation hash for Adyen transactions.
-
-        General method:
-
-        The signature is computed using the HMAC algorithm with the SHA-1
-        hashing function. The data passed, in the form fields, is concatenated
-        into a string, referred to as the “signing string”. The HMAC signature
-        is then computed over using a key that is specified in the Adyen Skin
-        settings. The signature is passed along with the form data and once
-        Adyen receives it, they use the key to verify that the data has not
-        been tampered with in transit. The signing string should be packed
-        into a binary format containing hex characters, and then base64-encoded
-        for transmission.
-
-        Payment Setup:
-
-        When setting up a payment the signing string is as follows:
-
-        paymentAmount + currencyCode + shipBeforeDate + merchantReference
-        + skinCode + merchantAccount + sessionValidity + shopperEmail
-        + shopperReference + recurringContract + allowedMethods
-        + blockedMethods + shopperStatement + merchantReturnData
-        + billingAddressType + deliveryAddressType + shopperType + offset
-
-        The order of the fields must be exactly as described above.
-        If you are not using one of the fields, such as allowedMethods,
-        the value for this field in the signing string is an empty string.
-
-        Payment Result:
-
-        The payment result uses the following signature string:
-
-        authResult + pspReference + merchantReference + skinCode
-        + merchantReturnData
-        """
-        signature = ''.join(str(params.get(key, '')) for key in keys)
-        hm = hmac.new(self.secret_key.encode(), signature.encode(), hashlib.sha1)
-        hash_ = base64.encodebytes(hm.digest()).strip().decode('utf-8')
-        return hash_
+        self.signer = settings.get(Constants.SIGNER)
 
     def _build_form_fields(self, adyen_request):
         """
@@ -172,21 +50,10 @@ class Gateway:
     def build_payment_form_fields(self, params):
         return self._build_form_fields(PaymentFormRequest(self, params))
 
-    def _process_response(self, adyen_response, params):
-        """
-        Process an Adyen response.
-        """
-        return adyen_response.process()
-
 
 class BaseInteraction:
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
-    HASH_KEYS = ()
-    HASH_FIELD = None
-
-    def hash(self):
-        return self.client._compute_hash(self.HASH_KEYS, self.params)
 
     def validate(self):
         self.check_fields()
@@ -243,29 +110,6 @@ class PaymentFormRequest(BaseInteraction):
         Constants.SHOPPER_TYPE,
         Constants.OFFSET,
     )
-    HASH_FIELD = Constants.MERCHANT_SIG
-
-    # Note that the order of the keys matter to compute the hash!
-    HASH_KEYS = (
-        Constants.PAYMENT_AMOUNT,
-        Constants.CURRENCY_CODE,
-        Constants.SHIP_BEFORE_DATE,
-        Constants.MERCHANT_REFERENCE,
-        Constants.SKIN_CODE,
-        Constants.MERCHANT_ACCOUNT,
-        Constants.SESSION_VALIDITY,
-        Constants.SHOPPER_EMAIL,
-        Constants.SHOPPER_REFERENCE,
-        Constants.RECURRING_CONTRACT,
-        Constants.ALLOWED_METHODS,
-        Constants.BLOCKED_METHODS,
-        Constants.SHOPPER_STATEMENT,
-        Constants.MERCHANT_RETURN_DATA,
-        Constants.BILLING_ADDRESS_TYPE,
-        Constants.DELIVERY_ADDRESS_TYPE,
-        Constants.SHOPPER_TYPE,
-        Constants.OFFSET,
-    )
 
     def __init__(self, client, params=None):
         self.client = client
@@ -273,7 +117,8 @@ class PaymentFormRequest(BaseInteraction):
         self.validate()
 
         # Compute request hash.
-        self.params.update({self.HASH_FIELD: self.hash()})
+        self.params.update(
+            self.client.signer.sign(self.params))
 
     def build_form_fields(self):
         return [{'type': 'hidden', 'name': name, 'value': value}
@@ -369,24 +214,11 @@ class PaymentRedirection(BaseResponse):
         Constants.PAYMENT_METHOD,
         Constants.PSP_REFERENCE,
     )
-    HASH_FIELD = Constants.MERCHANT_SIG
-
-    # Note that the order of the keys matter to compute the hash!
-    HASH_KEYS = (
-        Constants.AUTH_RESULT,
-        Constants.PSP_REFERENCE,
-        Constants.MERCHANT_REFERENCE,
-        Constants.SKIN_CODE,
-        Constants.MERCHANT_RETURN_DATA,
-    )
 
     def validate(self):
         super().validate()
-
         # Check that the transaction has not been tampered with.
-        received_hash = self.params.get(self.HASH_FIELD)
-        expected_hash = self.hash()
-        if not received_hash or expected_hash != received_hash:
+        if not self.client.signer.verify(self.params):
             raise InvalidTransactionException(
                 "The transaction is invalid. This may indicate a fraud attempt.")
 

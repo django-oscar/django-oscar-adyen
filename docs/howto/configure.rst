@@ -32,6 +32,18 @@ Edit your ``settings.py`` to set the following settings:
    Your Adyen Skin's secret key.
 
 
+.. data:: ADYEN_SIGNER_BACKEND
+
+   The Signer backend class as a python path. The signer will be responsible
+   for computing hash for signatures used in the payment request form, and to
+   verify the payment return URL's result.
+
+   By default ``adyen.signers.HMACSha1`` is used, which implement the SHA-1
+   legacy signature for Adyen.
+
+   .. versionadded:: 0.7.0
+
+
 .. data:: ADYEN_ACTION_URL
 
    The URL towards which the Adyen form should be POSTed to initiate the payment

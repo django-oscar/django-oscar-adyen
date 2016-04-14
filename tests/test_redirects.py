@@ -91,6 +91,7 @@ class TestAdyenPaymentRedirects(TestCase):
         success, status, details = Scaffold().handle_payment_feedback(request)
 
         assert success
+        assert status == Scaffold.PAYMENT_STATUS_ACCEPTED
         assert details['ip_address'] is None
 
         # After the test there's one authorised transaction and no refused transaction in the DB.

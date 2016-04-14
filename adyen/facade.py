@@ -4,6 +4,7 @@ import logging
 
 import iptools
 from django.http import HttpResponse
+from django.utils.module_loading import import_string
 from oscar.core.loading import get_class
 
 from .config import get_config
@@ -34,10 +35,13 @@ def get_gateway(request, config):
     based on the country or the language (or even the type of customer, its
     IP address, or other request specific parameter).
     """
+    signer_class = import_string(config.get_signer_backend(request))
+    secret_key = config.get_skin_secret(request)
     return Gateway({
         Constants.IDENTIFIER: config.get_identifier(request),
-        Constants.SECRET_KEY: config.get_skin_secret(request),
+        Constants.SECRET_KEY: secret_key,
         Constants.ACTION_URL: config.get_action_url(request),
+        Constants.SIGNER: signer_class(secret_key),
     })
 
 

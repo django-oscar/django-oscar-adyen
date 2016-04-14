@@ -56,6 +56,14 @@ class FromSettingsConfig(AbstractAdyenConfig):
         """Return :data:`ADYEN_SECRET_KEY`."""
         return settings.ADYEN_SECRET_KEY
 
+    def get_signer_backend(self, request):
+        """Return :data:`ADYEN_SIGNER_BACKEND` or ``adyen.signers.HMACSha1``"""
+        try:
+            return settings.ADYEN_SIGNER_BACKEND
+        except AttributeError:
+            # Default to the SHA-1 algorithm
+            return 'adyen.signers.HMACSha1'
+
     def get_ip_address_header(self):
         """Return :data:`ADYEN_IP_ADDRESS_HTTP_HEADER` or ``REMOTE_ADDR``.
 

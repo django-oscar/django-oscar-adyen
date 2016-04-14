@@ -13,6 +13,7 @@ Submodules
    adyen.models
    adyen.scaffold
    adyen.settings_config
+   adyen.signers
 
 Module contents
 ---------------

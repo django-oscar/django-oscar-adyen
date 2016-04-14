@@ -37,6 +37,12 @@ class TestAbstractAdyenConfig(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             config.get_skin_secret(request)
 
+    def test_get_signer_backend(self):
+        request = RequestFactory()
+        config = AbstractAdyenConfig()
+        with self.assertRaises(NotImplementedError):
+            config.get_signer_backend(request)
+
     def test_get_ip_address_header(self):
         config = AbstractAdyenConfig()
         with self.assertRaises(NotImplementedError):
@@ -66,6 +72,13 @@ class TestFromSettings(TestCase):
 
     def test_value_passing_works(self):
         assert get_config().get_action_url(None) == 'foo'
+
+    def test_get_signer_backend_default(self):
+        assert get_config().get_signer_backend(None) == 'adyen.signers.HMACSha1'
+
+    @override_settings(ADYEN_SIGNER_BACKEND='adyen.signers.HMACSha256')
+    def test_get_signer_backend_configured(self):
+        assert get_config().get_signer_backend(None) == 'adyen.signers.HMACSha256'
 
     # https://docs.djangoproject.com/en/1.8/topics/testing/tools/#django.test.modify_settings
     # Override settings is needed to let us delete settings on a per-test basis.
