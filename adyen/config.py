@@ -65,6 +65,18 @@ class AbstractAdyenConfig:
         """
         raise NotImplementedError
 
+    def get_signer_backend(self, request):
+        """Get the signer backend class as a python path.
+
+        :param request: Django HTTP request object.
+        :return: The python path to the signer backend class to use.
+        :rtype: str
+
+        The signer object will be used to sign payment request form and to
+        verify Adyen payment result fields and/or notifications.
+        """
+        raise NotImplementedError
+
     def get_ip_address_header(self):
         """Get the request HTTP header used to get customer's IP.
 

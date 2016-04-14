@@ -21,6 +21,8 @@ class Constants:
 
     FALSE = 'false'
     IDENTIFIER = 'identifier'
+    SECRET_KEY = 'secret_key'
+    SIGNER = 'signer'
     LIVE = 'live'
 
     MERCHANT_ACCOUNT = 'merchantAccount'
@@ -46,7 +48,6 @@ class Constants:
     TEST_REFERENCE_PREFIX = 'test_AUTHORISATION'
     REASON = 'reason'
     RECURRING_CONTRACT = 'recurringContract'
-    SECRET_KEY = 'secret_key'
     SEPARATOR = ':'
     SESSION_VALIDITY = 'sessionValidity'
     SKIN_CODE = 'skinCode'

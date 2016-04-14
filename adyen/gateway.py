@@ -22,6 +22,7 @@ class Gateway:
         Constants.IDENTIFIER,
         Constants.SECRET_KEY,
         Constants.ACTION_URL,
+        Constants.SIGNER,
     )
 
     def __init__(self, settings=None):
@@ -31,16 +32,17 @@ class Gateway:
         if settings is None:
             settings = {}
 
+        if any(key not in settings for key in self.MANDATORY_SETTINGS):
+            raise MissingParameterException(
+                "You need to specify the following parameters to initialize "
+                "the Adyen gateway: %s. "
+                "Please check your configuration."
+                % ', '.join(self.MANDATORY_SETTINGS))
+
         self.identifier = settings.get(Constants.IDENTIFIER)
         self.secret_key = settings.get(Constants.SECRET_KEY)
         self.action_url = settings.get(Constants.ACTION_URL)
-
-        if self.identifier is None or self.secret_key is None or self.action_url is None:
-            raise MissingParameterException(
-                "You need to specify the following parameters to initialize "
-                "the Adyen gateway: identifier, secret_key, action_url. "
-                "Please check your configuration."
-            )
+        self.signer = settings.get(Constants.SIGNER)
 
     def _compute_hash(self, keys, params):
         """
@@ -103,11 +105,6 @@ class Gateway:
 class BaseInteraction:
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
-    HASH_KEYS = ()
-    HASH_FIELD = None
-
-    def hash(self):
-        return self.client._compute_hash(self.HASH_KEYS, self.params)
 
     def validate(self):
         self.check_fields()
@@ -164,29 +161,6 @@ class PaymentFormRequest(BaseInteraction):
         Constants.SHOPPER_TYPE,
         Constants.OFFSET,
     )
-    HASH_FIELD = Constants.MERCHANT_SIG
-
-    # Note that the order of the keys matter to compute the hash!
-    HASH_KEYS = (
-        Constants.PAYMENT_AMOUNT,
-        Constants.CURRENCY_CODE,
-        Constants.SHIP_BEFORE_DATE,
-        Constants.MERCHANT_REFERENCE,
-        Constants.SKIN_CODE,
-        Constants.MERCHANT_ACCOUNT,
-        Constants.SESSION_VALIDITY,
-        Constants.SHOPPER_EMAIL,
-        Constants.SHOPPER_REFERENCE,
-        Constants.RECURRING_CONTRACT,
-        Constants.ALLOWED_METHODS,
-        Constants.BLOCKED_METHODS,
-        Constants.SHOPPER_STATEMENT,
-        Constants.MERCHANT_RETURN_DATA,
-        Constants.BILLING_ADDRESS_TYPE,
-        Constants.DELIVERY_ADDRESS_TYPE,
-        Constants.SHOPPER_TYPE,
-        Constants.OFFSET,
-    )
 
     def __init__(self, client, params=None):
         self.client = client
@@ -194,7 +168,8 @@ class PaymentFormRequest(BaseInteraction):
         self.validate()
 
         # Compute request hash.
-        self.params.update({self.HASH_FIELD: self.hash()})
+        self.params.update(
+            self.client.signer.sign(self.params))
 
     def build_form_fields(self):
         return [{'type': 'hidden', 'name': name, 'value': value}
@@ -290,24 +265,11 @@ class PaymentRedirection(BaseResponse):
         Constants.PAYMENT_METHOD,
         Constants.PSP_REFERENCE,
     )
-    HASH_FIELD = Constants.MERCHANT_SIG
-
-    # Note that the order of the keys matter to compute the hash!
-    HASH_KEYS = (
-        Constants.AUTH_RESULT,
-        Constants.PSP_REFERENCE,
-        Constants.MERCHANT_REFERENCE,
-        Constants.SKIN_CODE,
-        Constants.MERCHANT_RETURN_DATA,
-    )
 
     def validate(self):
         super().validate()
-
         # Check that the transaction has not been tampered with.
-        received_hash = self.params.get(self.HASH_FIELD)
-        expected_hash = self.hash()
-        if not received_hash or expected_hash != received_hash:
+        if not self.client.signer.verify(self.params):
             raise InvalidTransactionException(
                 "The transaction is invalid. This may indicate a fraud attempt.")
 
