@@ -135,9 +135,12 @@ class HMACSha1(AbstractSigner):
 
     .. seealso::
 
-        The Adyen documentation about `SHA-1 deprecated method`__.
+        The Adyen documentation about `SHA-1 deprecated method`__ for a general
+        explanation. The delivery, billing and shopper signatures are
+        explained in the `Open Invoice`__ documentation.
 
         .. __: https://docs.adyen.com/manuals/hpp-manual#hmacpaymentsetupsha1deprecated
+        .. __: https://docs.adyen.com/manuals/open-invoice-manual#openinvoiceprocess
 
     """
     PAYMENT_FORM_HASH_KEYS = (
@@ -166,6 +169,38 @@ class HMACSha1(AbstractSigner):
     the fields matter to compute the hash with the SHA-1 algorithm.
     """
 
+    PAYMENT_DELIVERY_HASH_KEYS = (
+        Constants.DELIVERY_STREET,
+        Constants.DELIVERY_NUMBER,
+        Constants.DELIVERY_CITY,
+        Constants.DELIVERY_POSTCODE,
+        Constants.DELIVERY_STATE,
+        Constants.DELIVERY_COUNTRY,
+    )
+    """List of fields to sign delivery address in payment request form."""
+
+    PAYMENT_BILLING_HASH_KEYS = (
+        Constants.BILLING_STREET,
+        Constants.BILLING_NUMBER,
+        Constants.BILLING_CITY,
+        Constants.BILLING_POSTCODE,
+        Constants.BILLING_STATE,
+        Constants.BILLING_COUNTRY,
+    )
+    """List of fields to sign billing address in payment request form."""
+
+    PAYMENT_SHOPPER_HASH_KEYS = (
+        Constants.SHOPPER_FIRSTNAME,
+        Constants.SHOPPER_INFIX,
+        Constants.SHOPPER_LASTNAME,
+        Constants.SHOPPER_GENDER,
+        Constants.SHOPPER_BIRTH_DAY,
+        Constants.SHOPPER_BIRTH_MONTH,
+        Constants.SHOPPER_BIRTH_YEAR,
+        Constants.SHOPPER_PHONE,
+    )
+    """List of fields to sign shopper data in payment request form."""
+
     PAYMENT_RETURN_HASH_KEYS = (
         Constants.AUTH_RESULT,
         Constants.PSP_REFERENCE,
@@ -190,9 +225,37 @@ class HMACSha1(AbstractSigner):
         signature = ''.join(
             str(fields.get(key, '')) for key in self.PAYMENT_FORM_HASH_KEYS)
 
-        return {
+        sign_fields = {
             Constants.MERCHANT_SIG: self.compute_hash(signature)
         }
+
+        if self.PAYMENT_DELIVERY_HASH_KEYS & fields.keys():
+            # Add a delivery signature only if at least one key is provided.
+            delivery_signature = ''.join(
+                str(fields.get(key, ''))
+                for key in self.PAYMENT_DELIVERY_HASH_KEYS)
+            sign_fields[Constants.DELIVERY_SIG] = self.compute_hash(
+                delivery_signature)
+
+        if self.PAYMENT_BILLING_HASH_KEYS & fields.keys():
+            # Add a billing signature only if at least one key is provided.
+            delivery_signature = ''.join(
+                str(fields.get(key, ''))
+                for key in self.PAYMENT_BILLING_HASH_KEYS)
+            sign_fields[Constants.BILLING_SIG] = self.compute_hash(
+                delivery_signature)
+
+        if (self.PAYMENT_SHOPPER_HASH_KEYS & fields.keys() or
+            Constants.SHOPPER_TYPE in fields):
+            # Add a shopper signature only if at least one key is provided or
+            # if the shopper type is provided.
+            shopper_signature = ''.join(
+                str(fields.get(key, ''))
+                for key in self.PAYMENT_SHOPPER_HASH_KEYS)
+            sign_fields[Constants.SHOPPER_SIG] = self.compute_hash(
+                shopper_signature)
+
+        return sign_fields
 
     def verify(self, fields):
         """Verify ``fields`` contains the appropriate signatures.

@@ -81,11 +81,16 @@ class Scaffold:
         # Build common field specs
         try:
             field_specs = {
-                Constants.MERCHANT_ACCOUNT: self.config.get_identifier(request),
+                # Payment Request meta-data
+                Constants.MERCHANT_ACCOUNT:
+                    self.config.get_identifier(request),
                 Constants.SKIN_CODE: self.config.get_skin_code(request),
-                Constants.SESSION_VALIDITY: session_validity.strftime(session_validity_format),
-                Constants.SHIP_BEFORE_DATE: ship_before_date.strftime(ship_before_date_format),
+                Constants.SESSION_VALIDITY:
+                    session_validity.strftime(session_validity_format),
+                Constants.SHIP_BEFORE_DATE:
+                    ship_before_date.strftime(ship_before_date_format),
 
+                # Order Data related fields
                 Constants.MERCHANT_REFERENCE: str(order_data['order_number']),
                 Constants.SHOPPER_REFERENCE: order_data['client_id'],
                 Constants.SHOPPER_EMAIL: order_data['client_email'],
@@ -109,6 +114,18 @@ class Scaffold:
         return_url = self.get_field_return_url(request, order_data)
         if return_url is not None:
             field_specs[Constants.MERCHANT_RETURN_URL] = return_url
+
+        if 'adyen_shopper' in order_data:
+            field_specs.update(
+                self.get_fields_shopper(request, order_data))
+
+        if 'shipping_address' in order_data:
+            field_specs.update(
+                self.get_fields_delivery(request, order_data))
+
+        if 'billing_address' in order_data:
+            field_specs.update(
+                self.get_fields_billing(request, order_data))
 
         return field_specs
 
@@ -165,6 +182,95 @@ class Scaffold:
             return None
 
         return return_url.replace('PAYMENT_PROVIDER_CODE', Constants.ADYEN)
+
+    def get_fields_shopper(self, request, order_data):
+        """Extract and return shopper related fields from ``order_data``.
+
+        :param request: Django HTTP request object.
+        :param dict order_data: Order's data.
+        :return: The Adyen specific shopper's fields.
+        """
+        shopper = order_data['adyen_shopper']
+        fields = {
+            Constants.SHOPPER_FIRSTNAME: shopper.get('first_name') or '',
+            Constants.SHOPPER_INFIX: shopper.get('infix') or '',
+            Constants.SHOPPER_LASTNAME: shopper.get('last_name') or '',
+            Constants.SHOPPER_GENDER: shopper.get('gender') or '',
+            Constants.SHOPPER_BIRTH_DAY: '',
+            Constants.SHOPPER_BIRTH_MONTH: '',
+            Constants.SHOPPER_BIRTH_YEAR: '',
+            Constants.SHOPPER_PHONE: shopper.get('phone_number') or '',
+        }
+
+        # Extract the birth-date: we expect a date or a datetime object but
+        # any object with a day, month and year attribute will do.
+        birthdate = shopper.get('birthdate')
+        if all(hasattr(birthdate, attr) for attr in ['day', 'month', 'year']):
+            fields.update({
+                Constants.SHOPPER_BIRTH_DAY: birthdate.day,
+                Constants.SHOPPER_BIRTH_MONTH: birthdate.month,
+                Constants.SHOPPER_BIRTH_YEAR: birthdate.year,
+            })
+
+        # By default shopper details are not visible.
+        fields[Constants.SHOPPER_TYPE] = (
+            order_data.get('shopper_visibility', '2'))
+
+        return fields
+
+    def get_fields_delivery(self, request, order_data):
+        """Extract and return delivery related fields from ``order_data``.
+
+        :param request: Django HTTP request object.
+        :param dict order_data: Order's data.
+        :return: A dict of payment's delivery fields.
+        """
+        shipping = order_data['shipping_address']
+
+        street = ' '.join([
+            l for l in [shipping.line1, shipping.line2, shipping.line3] if l])
+
+        fields = {
+            Constants.DELIVERY_STREET: street,
+            Constants.DELIVERY_NUMBER: '.',
+            Constants.DELIVERY_CITY: shipping.line4,
+            Constants.DELIVERY_POSTCODE: shipping.postcode,
+            Constants.DELIVERY_STATE: shipping.state or '',
+            Constants.DELIVERY_COUNTRY: shipping.country_id,
+        }
+
+        # By default delivery details are not visible.
+        fields[Constants.DELIVERY_ADDRESS_TYPE] = (
+            order_data.get('shopping_visibility', '2'))
+
+        return fields
+
+    def get_fields_billing(self, request, order_data):
+        """Extract and return billing related fields from ``order_data``.
+
+        :param request: Django HTTP request object.
+        :param dict order_data: Order's data.
+        :return: A dict of payment's billing fields.
+        """
+        billing = order_data['billing_address']
+
+        street = ' '.join([
+            l for l in [billing.line1, billing.line2, billing.line3] if l])
+
+        fields = {
+            Constants.BILLING_STREET: street,
+            Constants.BILLING_NUMBER: '.',
+            Constants.BILLING_CITY: billing.line4,
+            Constants.BILLING_POSTCODE: billing.postcode,
+            Constants.BILLING_STATE: billing.state or '',
+            Constants.BILLING_COUNTRY: billing.country_id,
+        }
+
+        # By default billing details are not visible.
+        fields[Constants.BILLING_ADDRESS_TYPE] = (
+            order_data.get('billing_visibility', '2'))
+
+        return fields
 
     def handle_payment_feedback(self, request):
         """Handle payment feedback from return URL or POST notification.
