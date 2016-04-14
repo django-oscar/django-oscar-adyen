@@ -7,6 +7,23 @@ There are currently 2 type of signatures:
 
 Each signer follows different rules to sign payment request form, and to verify
 Adyen return response and Adyen notification.
+
+.. note::
+
+    **About the signature:**
+
+    The data passed, in the form fields, is concatenated into a string,
+    referred to as the “signing string”. The HMAC signature is then computed
+    over using a key that is specified in the Adyen Skin settings (stored
+    into the :attr:`AbstractSigner.secret key`).
+
+    The signature is passed along with the form data and once Adyen receives it
+    they use the key to verify that the data has not been tampered with in
+    transit.
+
+    The signing string should be packed into a binary format containing hex
+    characters, and then base64-encoded for transmission.
+
 """
 import base64
 import hashlib

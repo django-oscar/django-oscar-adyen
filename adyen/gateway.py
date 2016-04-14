@@ -1,6 +1,3 @@
-import base64
-import hashlib
-import hmac
 import logging
 
 from .constants import Constants
@@ -44,48 +41,6 @@ class Gateway:
         self.action_url = settings.get(Constants.ACTION_URL)
         self.signer = settings.get(Constants.SIGNER)
 
-    def _compute_hash(self, keys, params):
-        """
-        Compute a validation hash for Adyen transactions.
-
-        General method:
-
-        The signature is computed using the HMAC algorithm with the SHA-1
-        hashing function. The data passed, in the form fields, is concatenated
-        into a string, referred to as the “signing string”. The HMAC signature
-        is then computed over using a key that is specified in the Adyen Skin
-        settings. The signature is passed along with the form data and once
-        Adyen receives it, they use the key to verify that the data has not
-        been tampered with in transit. The signing string should be packed
-        into a binary format containing hex characters, and then base64-encoded
-        for transmission.
-
-        Payment Setup:
-
-        When setting up a payment the signing string is as follows:
-
-        paymentAmount + currencyCode + shipBeforeDate + merchantReference
-        + skinCode + merchantAccount + sessionValidity + shopperEmail
-        + shopperReference + recurringContract + allowedMethods
-        + blockedMethods + shopperStatement + merchantReturnData
-        + billingAddressType + deliveryAddressType + shopperType + offset
-
-        The order of the fields must be exactly as described above.
-        If you are not using one of the fields, such as allowedMethods,
-        the value for this field in the signing string is an empty string.
-
-        Payment Result:
-
-        The payment result uses the following signature string:
-
-        authResult + pspReference + merchantReference + skinCode
-        + merchantReturnData
-        """
-        signature = ''.join(str(params.get(key, '')) for key in keys)
-        hm = hmac.new(self.secret_key.encode(), signature.encode(), hashlib.sha1)
-        hash_ = base64.encodebytes(hm.digest()).strip().decode('utf-8')
-        return hash_
-
     def _build_form_fields(self, adyen_request):
         """
         Return the hidden fields of an HTML form allowing to perform this request.
@@ -94,12 +49,6 @@ class Gateway:
 
     def build_payment_form_fields(self, params):
         return self._build_form_fields(PaymentFormRequest(self, params))
-
-    def _process_response(self, adyen_response, params):
-        """
-        Process an Adyen response.
-        """
-        return adyen_response.process()
 
 
 class BaseInteraction:
