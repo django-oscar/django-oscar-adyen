@@ -15,9 +15,8 @@ Adyen package for django-oscar
     :alt: TravisCI status
 
 This package provides integration with the `Adyen`_ payment gateway. It is
-designed to work seamlessly with the e-commerce framework `django-oscar`_, but
-can be used without Oscar. This extension supports Django 1.7+, Python 3.3+ and
-Oscar 1.0+.
+designed to work with the e-commerce framework `django-oscar`_. This extension
+supports Django 1.7+, Python 3.3+ and Oscar 1.0+.
 
 .. _`Adyen`: http://www.adyen.com/
 .. _`django-oscar`: https://github.com/django-oscar/django-oscar
@@ -53,24 +52,39 @@ Edit your ``settings.py`` to set the following settings:
 * ``ADYEN_SKIN_CODE`` -  The code for your Adyen skin.
 * ``ADYEN_SECRET_KEY`` - The secret key defined in your Adyen skin.
 * ``ADYEN_ACTION_URL`` -
-  The URL towards which the Adyen form should be POSTed to initiate the payment process
-  (e.g. 'https://test.adyen.com/hpp/select.shtml').
-* ``ADYEN_IP_ADDRESS_HTTP_HEADER`` - Optional. The header in `META` to inspect to determine
-  the IP address of the request. Defaults to `REMOTE_ADDR`.
+  The URL towards which the Adyen form should be POSTed to initiate the payment
+  process (e.g. 'https://test.adyen.com/hpp/select.shtml').
+* ``ADYEN_IP_ADDRESS_HTTP_HEADER`` - Optional. The header in `META` to inspect
+  to determine the IP address of the request. Defaults to `REMOTE_ADDR`.
 
 You will likely need to specify different settings in your test environment
 as opposed to your production environment.
 
 Class-based configuration
 -------------------------
-In more complex deployments, you will want to e.g. alter the Adyen identifier based on
-the request. That is not easily implemented with Django settings, so you can alternatively
-set ``ADYEN_CONFIG_CLASS`` to a config class of your own.
+In more complex deployments, you will want to e.g. alter the Adyen identifier
+based on the request. That is not easily implemented with Django settings, so
+you can alternatively set ``ADYEN_CONFIG_CLASS`` to a config class of your own.
 See `adyen.settings_config.FromSettingsConfig` for an example.
 
 
 Changes
 =======
+
+0.7.0 - WIP
+-----------
+
+- Add ``adyen.signers`` module to handle signature algorithm
+- Refactor how the `merchantSig` is generated, using the new ``adyen.signers``
+  module.
+- Splits constants and exceptions into their own module
+- Handle shopper, billing and delivery fields (with signatures for SHA-1)
+- Improve test coverage and other minor changes
+
+This version is backwrd compatible with version 0.6.0.
+
+Note that plugin users need to implement method ``get_signer_backend`` if they
+uses their own config class from the abstract config class.
 
 0.6.0 - released March 1st, 2016
 --------------------------------
@@ -86,7 +100,7 @@ Changes
 
 This version is backward compatible with version 0.5.0.
 
-Note that plugin users need to implement method `get_allowed_methods` if they
+Note that plugin users need to implement method ``get_allowed_methods`` if they
 uses their own config class from the abstract config class.
 
 0.5.0 - released October 7th, 2015
