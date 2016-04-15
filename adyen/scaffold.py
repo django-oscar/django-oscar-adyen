@@ -207,9 +207,9 @@ class Scaffold:
         birthdate = shopper.get('birthdate')
         if all(hasattr(birthdate, attr) for attr in ['day', 'month', 'year']):
             fields.update({
-                Constants.SHOPPER_BIRTH_DAY: birthdate.day,
-                Constants.SHOPPER_BIRTH_MONTH: birthdate.month,
-                Constants.SHOPPER_BIRTH_YEAR: birthdate.year,
+                Constants.SHOPPER_BIRTH_DAY: str(birthdate.day),
+                Constants.SHOPPER_BIRTH_MONTH: str(birthdate.month),
+                Constants.SHOPPER_BIRTH_YEAR: str(birthdate.year),
             })
 
         # By default shopper details are not visible.
