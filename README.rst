@@ -79,12 +79,19 @@ Changes
   module.
 - Splits constants and exceptions into their own module
 - Handle shopper, billing and delivery fields (with signatures for SHA-1)
+- Handle merchantSig with SHA-256 algorithm
 - Improve test coverage and other minor changes
 
 This version is backwrd compatible with version 0.6.0.
 
 Note that plugin users need to implement method ``get_signer_backend`` if they
 uses their own config class from the abstract config class.
+
+.. warning::
+
+   The implementation of the signature with SHA-256 algorithm has not been
+   tested in a real-life case. Plugin users may use it carefuly, and they are
+   invited to report any issues they may encounter.
 
 0.6.0 - released March 1st, 2016
 --------------------------------
