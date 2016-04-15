@@ -26,6 +26,7 @@ Adyen return response and Adyen notification.
 
 """
 import base64
+import binascii
 import hashlib
 import hmac
 
@@ -291,4 +292,104 @@ class HMACSha1(AbstractSigner):
         hm = hmac.new(self.secret_key.encode('utf-8'),
                       signature.encode('utf-8'),
                       hashlib.sha1)
+        return base64.encodebytes(hm.digest()).strip().decode('utf-8')
+
+
+def is_valid_key(key):
+    """Return if a key can be used in the SHA-256 signature."""
+    return key not in ['merchantSig', 'sig'] and not key.startswith('ignore.')
+
+
+def signature_escape(value):
+    """Escape field as required by Adyen.
+
+    See the Adyen documentation about using SHA-256 signature.
+    """
+    return value.replace('\\', '\\\\').replace(':', '\\:')
+
+
+class HMACSha256(AbstractSigner):
+    """Implement a HMAC signature with SHA-256 algorithm.
+
+    .. seealso::
+
+        The Adyen documentation about `SHA-256 deprecated method`__ for more
+        information about the signature.
+
+        .. __: https://docs.adyen.com/manuals/hpp-manual#hmacpaymentsetupsha256
+
+    """
+    def build_signature(self, fields):
+        """Build the signature string used to generate a signed key.
+
+        The signature format is a specific concatenation of keys and values
+        takenf from ``fields``:
+
+        * We sort by key the valid keys (see :func:`is_valid_key`),
+        * Both keys and values are escaped (see :func:`signature_escape`),
+        * Then keys are joined by ``:``; same for the values,
+        * And these two strings are joined by anoter ``:``.
+
+        There is no such thing as a hard-coded defined order of keys: if a key
+        is present, then it is used to sign the fields. This is much more
+        simple than the signing mechanism using the SHA-1 algorithm.
+        """
+        valid_fields = [
+            (signature_escape(key), signature_escape(value))
+            for key, value in fields.items()
+            if is_valid_key(key)]
+
+        signature_fields = sorted(valid_fields, key=lambda x: x[0])
+        signature_keys = ':'.join(field[0] for field in signature_fields)
+        signature_values = ':'.join(field[1] for field in signature_fields)
+
+        return signature_keys + ':' + signature_values
+
+    def sign(self, fields):
+        """Sign the given form ``fields`` and return the signature fields.
+
+        .. seealso::
+
+            The :meth:`AbstractSigner.sign` method for usage.
+
+        """
+        merchant_sig = self.compute_hash(self.build_signature(fields))
+        return {
+            Constants.MERCHANT_SIG: merchant_sig
+        }
+
+    def verify(self, fields):
+        """Verify ``fields`` contains the appropriate signatures.
+
+        .. warning::
+
+            This version validate only the ``merchantSig`` signature, given to
+            the payment return URL. Other signature fields are ignored (in
+            particular for notification signature).
+
+        .. seealso::
+
+            The :meth:`AbstractSigner.verify` method for usage.
+
+        """
+        if Constants.MERCHANT_SIG in fields:
+            given_hash = fields[Constants.MERCHANT_SIG]
+            signature = self.build_signature(fields)
+            return given_hash == self.compute_hash(signature)
+
+        return True
+
+    def compute_hash(self, signature):
+        """Compute hash using the ``hashlib.sha256`` algorithm.
+
+        .. seealso::
+
+            The :meth:`AbstractSigner.compute_hash` method for usage.
+
+        """
+        secret_key = binascii.a2b_hex(self.secret_key)
+        hm = hmac.new(secret_key,
+                      signature.encode('utf-8'),
+                      hashlib.sha256)
+
         return base64.encodebytes(hm.digest()).strip().decode('utf-8')
