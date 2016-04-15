@@ -46,6 +46,31 @@ fields.
    :meth:`adyen.scaffold.Scaffold.get_form_action` and
    :meth:`adyen.scaffold.Scaffold.get_form_fields` for more information.
 
+List of payment data items
+--------------------------
+
++--------------------+-----------------------+--------------------------------+----------+
+| Key                | Adyen Form Field      | Description                    | Required |
++====================+=======================+================================+==========+
+| ``order_number``   | ``merchantReference`` | Order Number                   | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``client_id``      | ``shopperReference``  | Customer's identifier          | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``client_email``   | ``shopperEmail``      | Customer's email               | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``currency_code``  | ``currencyCode``      | Currency code                  | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``amount``         | ``paymentAmount``     | Payment amount (in cent)       | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``shopper_locale`` | ``shopperLocale``     | Customer's locale              | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``country_code``   | ``countryCode``       | Merchant's Country             | Yes      |
++--------------------+-----------------------+--------------------------------+----------+
+| ``source_type``    | ``allowedMethods``    | Selected ``SourceType`` object | No       |
++--------------------+-----------------------+--------------------------------+----------+
+| ``return_url``     | ``resURL``            | Custom Payment Return URL      | No       |
++--------------------+-----------------------+--------------------------------+----------+
+
 
 Handle payment return
 =====================

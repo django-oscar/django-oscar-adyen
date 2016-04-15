@@ -16,6 +16,7 @@ DATABASES = {
 }
 
 OSCAR_DEFAULT_CURRENCY = 'EUR'
+OSCAR_REQUIRED_ADDRESS_FIELDS = []
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',

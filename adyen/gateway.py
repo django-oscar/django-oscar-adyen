@@ -105,10 +105,43 @@ class PaymentFormRequest(BaseInteraction):
         Constants.COUNTRY_CODE,
         Constants.MERCHANT_RETURN_URL,
         Constants.MERCHANT_RETURN_DATA,
-        Constants.BILLING_ADDRESS_TYPE,
-        Constants.DELIVERY_ADDRESS_TYPE,
-        Constants.SHOPPER_TYPE,
         Constants.OFFSET,
+
+        Constants.DELIVERY_SIG,
+        Constants.DELIVERY_ADDRESS_TYPE,
+        Constants.DELIVERY_STREET,
+        Constants.DELIVERY_NUMBER,
+        Constants.DELIVERY_CITY,
+        Constants.DELIVERY_POSTCODE,
+        Constants.DELIVERY_STATE,
+        Constants.DELIVERY_COUNTRY,
+
+        Constants.BILLING_SIG,
+        Constants.BILLING_ADDRESS_TYPE,
+
+        Constants.BILLING_STREET,
+        Constants.BILLING_NUMBER,
+        Constants.BILLING_CITY,
+        Constants.BILLING_POSTCODE,
+        Constants.BILLING_STATE,
+        Constants.BILLING_COUNTRY,
+
+        Constants.SHOPPER_EMAIL,
+        Constants.SHOPPER_LOCALE,
+        Constants.SHOPPER_REFERENCE,
+        Constants.SHOPPER_STATEMENT,
+
+        Constants.SHOPPER_SIG,
+        Constants.SHOPPER_TYPE,
+
+        Constants.SHOPPER_FIRSTNAME,
+        Constants.SHOPPER_INFIX,
+        Constants.SHOPPER_LASTNAME,
+        Constants.SHOPPER_GENDER,
+        Constants.SHOPPER_BIRTH_DAY,
+        Constants.SHOPPER_BIRTH_MONTH,
+        Constants.SHOPPER_BIRTH_YEAR,
+        Constants.SHOPPER_PHONE,
     )
 
     def __init__(self, client, params=None):
