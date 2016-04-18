@@ -241,7 +241,7 @@ class Scaffold:
 
         # By default delivery details are not visible.
         fields[Constants.DELIVERY_ADDRESS_TYPE] = (
-            order_data.get('shopping_visibility', '2'))
+            order_data.get('shipping_visibility', '2'))
 
         return fields
 

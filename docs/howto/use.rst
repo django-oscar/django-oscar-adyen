@@ -49,27 +49,42 @@ fields.
 List of payment data items
 --------------------------
 
-+--------------------+-----------------------+--------------------------------+----------+
-| Key                | Adyen Form Field      | Description                    | Required |
-+====================+=======================+================================+==========+
-| ``order_number``   | ``merchantReference`` | Order Number                   | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``client_id``      | ``shopperReference``  | Customer's identifier          | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``client_email``   | ``shopperEmail``      | Customer's email               | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``currency_code``  | ``currencyCode``      | Currency code                  | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``amount``         | ``paymentAmount``     | Payment amount (in cent)       | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``shopper_locale`` | ``shopperLocale``     | Customer's locale              | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``country_code``   | ``countryCode``       | Merchant's Country             | Yes      |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``source_type``    | ``allowedMethods``    | Selected ``SourceType`` object | No       |
-+--------------------+-----------------------+--------------------------------+----------+
-| ``return_url``     | ``resURL``            | Custom Payment Return URL      | No       |
-+--------------------+-----------------------+--------------------------------+----------+
++-------------------------+-------------------------+--------------------------------+----------+
+| Key                     | Adyen Form Field        | Description                    | Required |
++=========================+=========================+================================+==========+
+| ``order_number``        | ``merchantReference``   | Order Number                   | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``client_id``           | ``shopperReference``    | Customer's identifier          | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``client_email``        | ``shopperEmail``        | Customer's email               | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``currency_code``       | ``currencyCode``        | Currency code                  | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``amount``              | ``paymentAmount``       | Payment amount (in cent)       | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``shopper_locale``      | ``shopperLocale``       | Customer's locale              | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``country_code``        | ``countryCode``         | Merchant's Country             | Yes      |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``source_type``         | ``allowedMethods``      | Selected ``SourceType`` object | No       |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``return_url``          | ``resURL``              | Custom Payment Return URL      | No       |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``shipping_address``    | ``deliveryAddress.*``   | Customer shipping address      | No       |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``shipping_visibility`` | ``deliveryAddressType`` | Visibility of the address      | No       |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``billing_address``     | ``billingAddress.*``    | Customer billing address       | No       |
++-------------------------+-------------------------+--------------------------------+----------+
+| ``billing_visibility``  | ``billingAddressType``  | Visibility of the address      | No       |
++-------------------------+-------------------------+--------------------------------+----------+
+
+Both ``shipping_address`` and ``billing_address`` are expected to be standard
+shipping and billing Django-Oscar address objects.
+
+The ``shipping_visibility`` and ``billing_visibility`` take the values defined
+in the Adyen documentation: 1 for visible but not editable and 2 for not
+visible. By default, 2 is used by the plugin.
 
 
 Handle payment return
