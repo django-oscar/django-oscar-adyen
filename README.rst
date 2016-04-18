@@ -71,8 +71,8 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 Changes
 =======
 
-0.7.0 - WIP
------------
+0.7.0 - released April 18th, 2016
+---------------------------------
 
 - Add ``adyen.signers`` module to handle signature algorithm
 - Refactor how the `merchantSig` is generated, using the new ``adyen.signers``
