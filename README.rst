@@ -71,6 +71,12 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 Changes
 =======
 
+
+0.7.1 - released April 19th, 2016
+---------------------------------
+
+- Sanitize payment request form fields from newlines
+
 0.7.0 - released April 18th, 2016
 ---------------------------------
 

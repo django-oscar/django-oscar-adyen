@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
 
+
 setup(
     name='django-oscar-adyen',
-    version='0.7.0',
+    version='0.7.1',
     url='https://github.com/oscaro/django-oscar-adyen',
     author='Oscaro',
     description='Adyen HPP payment module for django-oscar',

@@ -8,6 +8,20 @@ Facade = get_class('adyen.facade', 'Facade')
 MissingFieldException = get_class('adyen.gateway', 'MissingFieldException')
 
 
+def sanitize_field(value):
+    """Clean field used in the payment request form
+
+    :param string value:
+    :return: A sanitized value
+
+    Adyen suggest to remove all new-line, so we do.
+    """
+    if value is None:
+        return value
+
+    return str(value).replace('\n', ' ').replace('\r', ' ').strip()
+
+
 class Scaffold:
     """Entry point to handle Adyen HPP.
 
@@ -127,7 +141,11 @@ class Scaffold:
             field_specs.update(
                 self.get_fields_billing(request, order_data))
 
-        return field_specs
+        return {
+            key: sanitize_field(value)
+            for key, value in field_specs.items()
+        }
+
 
     def get_field_allowed_methods(self, request, order_data):
         """Get a string of comma separated allowed payment methods.
