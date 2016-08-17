@@ -51,7 +51,7 @@ class Gateway:
         return self._build_form_fields(PaymentFormRequest(self, params))
 
 
-class BaseInteraction:
+class BaseInteraction(object):
     REQUIRED_FIELDS = ()
     OPTIONAL_FIELDS = ()
 
@@ -219,7 +219,7 @@ class PaymentNotification(BaseResponse):
             key: self.params[key]
             for key in self.params if Constants.ADDITIONAL_DATA_PREFIX not in key
         }
-        super().check_fields()
+        super(PaymentNotification, self).check_fields()
 
     def process(self):
         payment_result = self.params.get(Constants.SUCCESS, None)
@@ -249,7 +249,7 @@ class PaymentRedirection(BaseResponse):
     )
 
     def validate(self):
-        super().validate()
+        super(PaymentRedirection, self).validate()
         # Check that the transaction has not been tampered with.
         if not self.client.signer.verify(self.params):
             raise InvalidTransactionException(

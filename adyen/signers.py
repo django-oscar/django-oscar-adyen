@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Signers are helpers to sign and verify Adyen requests & responses.
 
 There are currently 2 type of signatures:
