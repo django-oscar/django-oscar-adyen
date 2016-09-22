@@ -141,11 +141,22 @@ class Scaffold:
             field_specs.update(
                 self.get_fields_billing(request, order_data))
 
+        if 'brand_code' in order_data:
+            field_specs[Constants.PAYMENT_BRAND_CODE] = (
+                order_data['brand_code']
+            )
+            try:
+                field_specs[Constants.PAYMENT_ISSUER_ID] = (
+                    order_data['issuer_id']
+                )
+            except KeyError:
+                raise MissingFieldException(
+                    "Fields issuer_id missing from the order data.")
+
         return {
             key: sanitize_field(value)
             for key, value in field_specs.items()
         }
-
 
     def get_field_allowed_methods(self, request, order_data):
         """Get a string of comma separated allowed payment methods.
