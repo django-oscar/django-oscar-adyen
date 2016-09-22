@@ -43,6 +43,8 @@ class Constants:
     VALUE = 'value'
 
     # Payment related constants ---
+    PAYMENT_BRAND_CODE = 'brandCode'
+    PAYMENT_ISSUER_ID = 'issuerId'
 
     PAYMENT_AMOUNT = 'paymentAmount'
     PAYMENT_METHOD = 'paymentMethod'
