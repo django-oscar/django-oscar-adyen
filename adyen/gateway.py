@@ -107,6 +107,9 @@ class PaymentFormRequest(BaseInteraction):
         Constants.MERCHANT_RETURN_DATA,
         Constants.OFFSET,
 
+        Constants.PAYMENT_BRAND_CODE,
+        Constants.PAYMENT_ISSUER_ID,
+
         Constants.DELIVERY_SIG,
         Constants.DELIVERY_ADDRESS_TYPE,
         Constants.DELIVERY_STREET,
