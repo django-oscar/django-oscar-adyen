@@ -11,17 +11,19 @@ EXPECTED_FIELDS_LIST = [
     {'type': 'hidden', 'name': 'currencyCode', 'value': 'EUR'},
     {'type': 'hidden', 'name': 'merchantAccount', 'value': settings.ADYEN_IDENTIFIER},
     {'type': 'hidden', 'name': 'merchantReference', 'value': '00000000123'},
-    {'type': 'hidden', 'name': 'merchantReturnData', 'value': 123},
+    {'type': 'hidden', 'name': 'merchantReturnData', 'value': '123'},
     {'type': 'hidden', 'name': 'merchantSig', 'value': 'kKvzRvx7wiPLrl8t8+owcmMuJZM='},
-    {'type': 'hidden', 'name': 'paymentAmount', 'value': 123},
+    {'type': 'hidden', 'name': 'paymentAmount', 'value': '123'},
     {'type': 'hidden', 'name': 'resURL', 'value': TEST_RETURN_URL},
     {'type': 'hidden', 'name': 'sessionValidity', 'value': '2014-07-31T17:20:00Z'},
     {'type': 'hidden', 'name': 'shipBeforeDate', 'value': '2014-08-30'},
     {'type': 'hidden', 'name': 'shopperEmail', 'value': 'test@example.com'},
     {'type': 'hidden', 'name': 'shopperLocale', 'value': 'fr'},
-    {'type': 'hidden', 'name': 'shopperReference', 'value': 789},
+    {'type': 'hidden', 'name': 'shopperReference', 'value': '789'},
     {'type': 'hidden', 'name': 'skinCode', 'value': 'cqQJKZpg'},
     {'type': 'hidden', 'name': 'countryCode', 'value': 'fr'},
+    {'type': 'hidden', 'name': 'brandCode', 'value': 'ideal'},
+    {'type': 'hidden', 'name': 'issuerId', 'value': '1211'},
 ]
 
 ORDER_DATA = {
@@ -36,6 +38,8 @@ ORDER_DATA = {
     'order_number': '00000000123',
     'return_url': TEST_RETURN_URL,
     'shopper_locale': 'fr',
+    'brand_code': 'ideal',
+    'issuer_id': '1211',
 }
 
 
