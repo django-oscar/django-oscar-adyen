@@ -75,6 +75,8 @@ class BaseInteraction:
         # Check that no unexpected field is present.
         expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
         for field_name in params.keys():
+            if field_name.startswith('openinvoicedata.'):
+                continue
             if field_name not in expected_fields:
                 raise UnexpectedFieldException(
                     "The %s field is unexpected" % field_name
@@ -145,6 +147,7 @@ class PaymentFormRequest(BaseInteraction):
         Constants.SHOPPER_BIRTH_MONTH,
         Constants.SHOPPER_BIRTH_YEAR,
         Constants.SHOPPER_PHONE,
+
     )
 
     def __init__(self, client, params=None):
