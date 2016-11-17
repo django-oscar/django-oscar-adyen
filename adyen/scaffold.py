@@ -1,5 +1,6 @@
 from django.utils import timezone
 from oscar.core.loading import get_class
+from decimal import Decimal
 
 from .config import get_config
 
@@ -153,6 +154,10 @@ class Scaffold:
                 raise MissingFieldException(
                     "Fields issuer_id missing from the order data.")
 
+        if 'order' in order_data:
+            field_specs.update(
+                self.get_fields_invoice(request, order_data))
+
         return {
             key: sanitize_field(value)
             for key, value in field_specs.items()
@@ -188,7 +193,7 @@ class Scaffold:
             allowed_methods = self.config.get_allowed_methods(request,
                                                               source_type)
         except NotImplementedError:
-            # New in version 0.6.0: this may not work properly with existing
+            # New in version 0.6.0: this may not work properly with existing
             # application using this plugin. We make sure not to break here
             # and keep this plugin backward-compatible with version 0.5.
             return None
@@ -299,6 +304,38 @@ class Scaffold:
         fields[Constants.BILLING_ADDRESS_TYPE] = (
             order_data.get('billing_visibility', '2'))
 
+        return fields
+
+    def get_fields_invoice(self, request, order_data):
+        order = order_data['order']
+
+        def minor_units(amount):
+            return (Decimal(amount) * 100).quantize(Decimal('1'))
+
+        vat_category = 'High'  # or 'Low' or 'None'
+
+        fields = {
+            Constants.INVOICE_NUMLINES: order.lines.count(),
+        }
+
+        for index, line in enumerate(order.lines.all()):
+            ref = index + 1
+            excl_tax = minor_units(line.unit_price_excl_tax)
+            incl_tax = minor_units(line.unit_price_incl_tax)
+            tax = incl_tax - excl_tax
+            tax_percentage = minor_units((line.unit_price_incl_tax /
+                                          line.unit_price_excl_tax - 1) * 100)
+
+            fields.update({
+                Constants.INVOICE_LINE_LINEREFERENCE % ref: ref,
+                Constants.INVOICE_LINE_CURRENCY % ref: order.currency,
+                Constants.INVOICE_LINE_DESCRIPTION % ref: line.product.get_title(),
+                Constants.INVOICE_LINE_ITEMAMOUNT % ref: int(excl_tax),
+                Constants.INVOICE_LINE_ITEMVATAMOUNT % ref: int(tax),
+                Constants.INVOICE_LINE_ITEMVATPERCENTAGE % ref: int(tax_percentage),
+                Constants.INVOICE_LINE_NUMBEROFITEMS % ref: line.quantity,
+                Constants.INVOICE_LINE_VATCATEGORY % ref: vat_category,
+            })
         return fields
 
     def handle_payment_feedback(self, request):
