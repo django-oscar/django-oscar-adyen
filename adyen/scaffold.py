@@ -252,6 +252,13 @@ class Scaffold:
 
         return fields
 
+    def get_street_housenumber(self, address):
+        # assume housenumber is last word
+        words = address.split()
+        housenumber = words[-1]
+        street = ' '.join(words[:-1])
+        return street, housenumber
+
     def get_fields_delivery(self, request, order_data):
         """Extract and return delivery related fields from ``order_data``.
 
@@ -264,9 +271,11 @@ class Scaffold:
         street = ' '.join([
             l for l in [shipping.line1, shipping.line2, shipping.line3] if l])
 
+        street, housenumber = self.get_street_housenumber(street)
+
         fields = {
             Constants.DELIVERY_STREET: street,
-            Constants.DELIVERY_NUMBER: '.',
+            Constants.DELIVERY_NUMBER: housenumber,
             Constants.DELIVERY_CITY: shipping.line4,
             Constants.DELIVERY_POSTCODE: shipping.postcode,
             Constants.DELIVERY_STATE: shipping.state or '',
@@ -291,10 +300,7 @@ class Scaffold:
         street = ' '.join([
             l for l in [billing.line1, billing.line2, billing.line3] if l])
 
-        # assume housenumber is last word
-        words = street.split()
-        housenumber = words[-1]
-        street = ' '.join(words[:-1])
+        street, housenumber = self.get_street_housenumber(street)
 
         fields = {
             Constants.BILLING_STREET: street,
