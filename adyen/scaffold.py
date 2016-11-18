@@ -310,32 +310,41 @@ class Scaffold:
         order = order_data['order']
 
         def minor_units(amount):
-            return (Decimal(amount) * 100).quantize(Decimal('1'))
-
-        vat_category = 'High'  # or 'Low' or 'None'
+            return int((Decimal(amount) * 100).quantize(Decimal('1')))
 
         fields = {
             Constants.INVOICE_NUMLINES: order.lines.count(),
         }
 
+        check = 0
         for index, line in enumerate(order.lines.all()):
             ref = index + 1
+            perc_tax = minor_units(line.unit_tax_rate)
             excl_tax = minor_units(line.unit_price_excl_tax)
             incl_tax = minor_units(line.unit_price_incl_tax)
             tax = incl_tax - excl_tax
-            tax_percentage = minor_units((line.unit_price_incl_tax /
-                                          line.unit_price_excl_tax - 1) * 100)
+
+            if perc_tax > 1000:
+                vat_category = 'High'  # or 'Low' or 'None'
+            elif perc_tax > 100:
+                vat_category = 'Low'
+            else:
+                vat_category = 'None'
 
             fields.update({
                 Constants.INVOICE_LINE_LINEREFERENCE % ref: ref,
                 Constants.INVOICE_LINE_CURRENCY % ref: order.currency,
                 Constants.INVOICE_LINE_DESCRIPTION % ref: line.product.get_title(),
-                Constants.INVOICE_LINE_ITEMAMOUNT % ref: int(excl_tax),
-                Constants.INVOICE_LINE_ITEMVATAMOUNT % ref: int(tax),
-                Constants.INVOICE_LINE_ITEMVATPERCENTAGE % ref: int(tax_percentage),
-                Constants.INVOICE_LINE_NUMBEROFITEMS % ref: line.quantity,
+                Constants.INVOICE_LINE_ITEMAMOUNT % ref: str(excl_tax),
+                Constants.INVOICE_LINE_ITEMVATAMOUNT % ref: str(tax),
+                Constants.INVOICE_LINE_ITEMVATPERCENTAGE % ref: str(perc_tax),
+                Constants.INVOICE_LINE_NUMBEROFITEMS % ref: str(line.quantity),
                 Constants.INVOICE_LINE_VATCATEGORY % ref: vat_category,
             })
+            check += (int(excl_tax) + int(tax)) * line.quantity
+
+        check = str(check)
+        assert check == order_data['amount']
         return fields
 
     def handle_payment_feedback(self, request):
