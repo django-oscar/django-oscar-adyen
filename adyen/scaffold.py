@@ -291,9 +291,14 @@ class Scaffold:
         street = ' '.join([
             l for l in [billing.line1, billing.line2, billing.line3] if l])
 
+        # assume housenumber is last word
+        words = street.split()
+        housenumber = words[-1]
+        street = ' '.join(words[:-1])
+
         fields = {
             Constants.BILLING_STREET: street,
-            Constants.BILLING_NUMBER: '.',
+            Constants.BILLING_NUMBER: housenumber,
             Constants.BILLING_CITY: billing.line4,
             Constants.BILLING_POSTCODE: billing.postcode,
             Constants.BILLING_STATE: billing.state or '',
