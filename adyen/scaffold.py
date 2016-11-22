@@ -252,12 +252,17 @@ class Scaffold:
 
         return fields
 
-    def get_street_housenumber(self, address):
-        # assume housenumber is last word
-        words = address.split()
-        housenumber = words[-1]
-        street = ' '.join(words[:-1])
-        return street, housenumber
+    def get_street_housenr(self, address):
+        words = [l for l in [address.line1, address.line2, address.line3] if l]
+        numbers = [i for i, token in enumerate(words) if str.isdigit(token)]
+        if numbers:
+            offset = numbers[0]
+            housenr = ' '.join(words[offset:])
+            street = ' '.join(words[:offset])
+        else:
+            housenr = words[-1]
+            street = ' '.join(words[:-1])
+        return (street, housenr)
 
     def get_fields_delivery(self, request, order_data):
         """Extract and return delivery related fields from ``order_data``.
@@ -268,14 +273,11 @@ class Scaffold:
         """
         shipping = order_data['shipping_address']
 
-        street = ' '.join([
-            l for l in [shipping.line1, shipping.line2, shipping.line3] if l])
-
-        street, housenumber = self.get_street_housenumber(street)
+        street, housenr = self.get_street_housenr(shipping)
 
         fields = {
             Constants.DELIVERY_STREET: street,
-            Constants.DELIVERY_NUMBER: housenumber,
+            Constants.DELIVERY_NUMBER: housenr,
             Constants.DELIVERY_CITY: shipping.line4,
             Constants.DELIVERY_POSTCODE: shipping.postcode,
             Constants.DELIVERY_STATE: shipping.state or '',
@@ -297,14 +299,11 @@ class Scaffold:
         """
         billing = order_data['billing_address']
 
-        street = ' '.join([
-            l for l in [billing.line1, billing.line2, billing.line3] if l])
-
-        street, housenumber = self.get_street_housenumber(street)
+        street, housenr = self.get_street_housenr(billing)
 
         fields = {
             Constants.BILLING_STREET: street,
-            Constants.BILLING_NUMBER: housenumber,
+            Constants.BILLING_NUMBER: housenr,
             Constants.BILLING_CITY: billing.line4,
             Constants.BILLING_POSTCODE: billing.postcode,
             Constants.BILLING_STATE: billing.state or '',
