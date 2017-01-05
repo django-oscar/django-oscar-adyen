@@ -330,8 +330,12 @@ class Scaffold:
         for index, line in enumerate(order.lines.all()):
             ref = index + 1
             perc_tax = minor_units(line.unit_tax_rate)
-            excl_tax = minor_units(line.unit_price_excl_tax)
-            incl_tax = minor_units(line.unit_price_incl_tax)
+            excl_tax = minor_units(
+                line.line_price_excl_tax / line.quantity
+            )
+            incl_tax = minor_units(
+                line.line_price_incl_tax / line.quantity
+            )
             tax = incl_tax - excl_tax
 
             if perc_tax > 1000:
