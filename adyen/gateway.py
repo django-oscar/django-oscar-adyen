@@ -67,7 +67,7 @@ class BaseInteraction:
 
         # Check that all mandatory fields are present.
         for field_name in self.REQUIRED_FIELDS:
-            if not params.get(field_name):
+            if field_name not in params:
                 raise MissingFieldException(
                     "The %s field is missing" % field_name
                 )
