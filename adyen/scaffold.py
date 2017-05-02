@@ -253,7 +253,9 @@ class Scaffold:
         return fields
 
     def get_street_housenr(self, address):
-        words = [l for l in [address.line1, address.line2, address.line3] if l]
+        words = ' '.join(
+            [l for l in [address.line1, address.line2, address.line3] if l]
+        ).split()
         numbers = [i for i, token in enumerate(words) if str.isdigit(token)]
         if numbers:
             offset = numbers[0]

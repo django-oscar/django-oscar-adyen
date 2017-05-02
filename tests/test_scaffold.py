@@ -9,6 +9,30 @@ from adyen.scaffold import Scaffold
 
 class TestScaffold(unittest.TestCase):
 
+    def test_get_street_housenr(self):
+        scaffold = Scaffold()
+        address = ShippingAddress(
+            first_name='First Name',
+            last_name='Last Name',
+            line1='First Line Address 1',
+            line4='Bruxelles',
+            postcode='1000',
+            country_id='BE')
+
+        street, housenr = scaffold.get_street_housenr(address)
+        assert housenr == '1'
+
+        address.line1 = 'First Line Address'
+        address.line2 = '1'
+        street, housenr = scaffold.get_street_housenr(address)
+        assert housenr == '1'
+
+        address.line1 = 'First Line'
+        address.line2 = 'Address'
+        address.line3 = '1'
+        street, housenr = scaffold.get_street_housenr(address)
+        assert housenr == '1'
+
     def test_get_fields_delivery(self):
         scaffold = Scaffold()
 

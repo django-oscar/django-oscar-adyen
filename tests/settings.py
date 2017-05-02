@@ -22,8 +22,13 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
 )
 
-INSTALLED_APPS = ('adyen',)
+INSTALLED_APPS = (
+    'adyen',
+    'django.contrib.contenttypes',
+    'django.contrib.auth',
+)
 
+OSCAR_SLUG_ALLOW_UNICODE = False
 ADYEN_IDENTIFIER = 'OscaroFR'
 ADYEN_SECRET_KEY = 'oscaroscaroscaro'
 ADYEN_ACTION_URL = 'https://test.adyen.com/hpp/select.shtml'
