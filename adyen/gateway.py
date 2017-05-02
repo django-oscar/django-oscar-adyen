@@ -67,7 +67,7 @@ class BaseInteraction:
 
         # Check that all mandatory fields are present.
         for field_name in self.REQUIRED_FIELDS:
-            if not params.get(field_name):
+            if field_name not in params:
                 raise MissingFieldException(
                     "The %s field is missing" % field_name
                 )
@@ -75,6 +75,8 @@ class BaseInteraction:
         # Check that no unexpected field is present.
         expected_fields = self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS
         for field_name in params.keys():
+            if field_name.startswith('openinvoicedata.'):
+                continue
             if field_name not in expected_fields:
                 raise UnexpectedFieldException(
                     "The %s field is unexpected" % field_name
@@ -106,6 +108,9 @@ class PaymentFormRequest(BaseInteraction):
         Constants.MERCHANT_RETURN_URL,
         Constants.MERCHANT_RETURN_DATA,
         Constants.OFFSET,
+
+        Constants.PAYMENT_BRAND_CODE,
+        Constants.PAYMENT_ISSUER_ID,
 
         Constants.DELIVERY_SIG,
         Constants.DELIVERY_ADDRESS_TYPE,
@@ -142,6 +147,7 @@ class PaymentFormRequest(BaseInteraction):
         Constants.SHOPPER_BIRTH_MONTH,
         Constants.SHOPPER_BIRTH_YEAR,
         Constants.SHOPPER_PHONE,
+
     )
 
     def __init__(self, client, params=None):

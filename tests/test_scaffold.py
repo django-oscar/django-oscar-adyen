@@ -15,7 +15,7 @@ class TestScaffold(unittest.TestCase):
         address = ShippingAddress(
             first_name='First Name',
             last_name='Last Name',
-            line1='First Line Address',
+            line1='First Line Address 1',
             line4='Bruxelles',
             postcode='1000',
             country_id='BE')
@@ -32,8 +32,8 @@ class TestScaffold(unittest.TestCase):
         assert Constants.DELIVERY_STATE in fields
         assert Constants.DELIVERY_COUNTRY in fields
 
-        assert fields[Constants.DELIVERY_STREET] == address.line1
-        assert fields[Constants.DELIVERY_NUMBER] == '.', (
+        assert fields[Constants.DELIVERY_STREET] == 'First Line Address'
+        assert fields[Constants.DELIVERY_NUMBER] == '1', (
             'Since Oscar does not provide a street number we set a fake value')
         assert fields[Constants.DELIVERY_CITY] == address.city
         assert fields[Constants.DELIVERY_POSTCODE] == address.postcode
@@ -46,7 +46,7 @@ class TestScaffold(unittest.TestCase):
         address = BillingAddress(
             first_name='First Name',
             last_name='Last Name',
-            line1='First Line Address',
+            line1='First Line Address 1',
             line4='Bruxelles',
             postcode='1000',
             country_id='BE')
@@ -63,8 +63,8 @@ class TestScaffold(unittest.TestCase):
         assert Constants.BILLING_STATE in fields
         assert Constants.BILLING_COUNTRY in fields
 
-        assert fields[Constants.BILLING_STREET] == address.line1
-        assert fields[Constants.BILLING_NUMBER] == '.', (
+        assert fields[Constants.BILLING_STREET] == 'First Line Address'
+        assert fields[Constants.BILLING_NUMBER] == '1', (
             'Since Oscar does not provide a street number we set a fake value')
         assert fields[Constants.BILLING_CITY] == address.city
         assert fields[Constants.BILLING_POSTCODE] == address.postcode

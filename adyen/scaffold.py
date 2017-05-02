@@ -1,5 +1,6 @@
 from django.utils import timezone
 from oscar.core.loading import get_class
+from decimal import Decimal
 
 from .config import get_config
 
@@ -141,11 +142,26 @@ class Scaffold:
             field_specs.update(
                 self.get_fields_billing(request, order_data))
 
+        if 'brand_code' in order_data:
+            field_specs[Constants.PAYMENT_BRAND_CODE] = (
+                order_data['brand_code']
+            )
+            try:
+                field_specs[Constants.PAYMENT_ISSUER_ID] = (
+                    order_data['issuer_id']
+                )
+            except KeyError:
+                raise MissingFieldException(
+                    "Fields issuer_id missing from the order data.")
+
+        if 'order' in order_data:
+            field_specs.update(
+                self.get_fields_invoice(request, order_data))
+
         return {
             key: sanitize_field(value)
             for key, value in field_specs.items()
         }
-
 
     def get_field_allowed_methods(self, request, order_data):
         """Get a string of comma separated allowed payment methods.
@@ -177,7 +193,7 @@ class Scaffold:
             allowed_methods = self.config.get_allowed_methods(request,
                                                               source_type)
         except NotImplementedError:
-            # New in version 0.6.0: this may not work properly with existing
+            # New in version 0.6.0: this may not work properly with existing
             # application using this plugin. We make sure not to break here
             # and keep this plugin backward-compatible with version 0.5.
             return None
@@ -236,6 +252,18 @@ class Scaffold:
 
         return fields
 
+    def get_street_housenr(self, address):
+        words = [l for l in [address.line1, address.line2, address.line3] if l]
+        numbers = [i for i, token in enumerate(words) if str.isdigit(token)]
+        if numbers:
+            offset = numbers[0]
+            housenr = ' '.join(words[offset:])
+            street = ' '.join(words[:offset])
+        else:
+            housenr = words[-1]
+            street = ' '.join(words[:-1])
+        return (street, housenr)
+
     def get_fields_delivery(self, request, order_data):
         """Extract and return delivery related fields from ``order_data``.
 
@@ -245,12 +273,11 @@ class Scaffold:
         """
         shipping = order_data['shipping_address']
 
-        street = ' '.join([
-            l for l in [shipping.line1, shipping.line2, shipping.line3] if l])
+        street, housenr = self.get_street_housenr(shipping)
 
         fields = {
             Constants.DELIVERY_STREET: street,
-            Constants.DELIVERY_NUMBER: '.',
+            Constants.DELIVERY_NUMBER: housenr,
             Constants.DELIVERY_CITY: shipping.line4,
             Constants.DELIVERY_POSTCODE: shipping.postcode,
             Constants.DELIVERY_STATE: shipping.state or '',
@@ -272,12 +299,11 @@ class Scaffold:
         """
         billing = order_data['billing_address']
 
-        street = ' '.join([
-            l for l in [billing.line1, billing.line2, billing.line3] if l])
+        street, housenr = self.get_street_housenr(billing)
 
         fields = {
             Constants.BILLING_STREET: street,
-            Constants.BILLING_NUMBER: '.',
+            Constants.BILLING_NUMBER: housenr,
             Constants.BILLING_CITY: billing.line4,
             Constants.BILLING_POSTCODE: billing.postcode,
             Constants.BILLING_STATE: billing.state or '',
@@ -288,6 +314,51 @@ class Scaffold:
         fields[Constants.BILLING_ADDRESS_TYPE] = (
             order_data.get('billing_visibility', '2'))
 
+        return fields
+
+    def get_fields_invoice(self, request, order_data):
+        order = order_data['order']
+
+        def minor_units(amount):
+            return int((Decimal(amount) * 100).quantize(Decimal('1')))
+
+        fields = {
+            Constants.INVOICE_NUMLINES: order.lines.count(),
+        }
+
+        check = 0
+        for index, line in enumerate(order.lines.all()):
+            ref = index + 1
+            perc_tax = minor_units(line.unit_tax_rate)
+            excl_tax = minor_units(
+                line.line_price_excl_tax / line.quantity
+            )
+            incl_tax = minor_units(
+                line.line_price_incl_tax / line.quantity
+            )
+            tax = incl_tax - excl_tax
+
+            if perc_tax > 1000:
+                vat_category = 'High'  # or 'Low' or 'None'
+            elif perc_tax > 100:
+                vat_category = 'Low'
+            else:
+                vat_category = 'None'
+
+            fields.update({
+                Constants.INVOICE_LINE_LINEREFERENCE % ref: ref,
+                Constants.INVOICE_LINE_CURRENCY % ref: order.currency,
+                Constants.INVOICE_LINE_DESCRIPTION % ref: line.product.get_title(),
+                Constants.INVOICE_LINE_ITEMAMOUNT % ref: str(excl_tax),
+                Constants.INVOICE_LINE_ITEMVATAMOUNT % ref: str(tax),
+                Constants.INVOICE_LINE_ITEMVATPERCENTAGE % ref: str(perc_tax),
+                Constants.INVOICE_LINE_NUMBEROFITEMS % ref: str(line.quantity),
+                Constants.INVOICE_LINE_VATCATEGORY % ref: vat_category,
+            })
+            check += (int(excl_tax) + int(tax)) * line.quantity
+
+        check = str(check)
+        assert check == order_data['amount']
         return fields
 
     def handle_payment_feedback(self, request):
