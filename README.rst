@@ -70,6 +70,10 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 
 Changes
 =======
+0.8.0 - unreleased
+------------------
+
+- Add support for OpenInvoice (Klarna, AfterPay)
 
 
 0.7.1 - released April 19th, 2016
