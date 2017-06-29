@@ -1,16 +1,22 @@
 language: python
 
 python:
-  - "3.3"
-  - "3.4"
+  - "3.6"
 
 env:
   global:
     - PYTHONPATH=.:$PYTHONPATH
   matrix:
-    - DJANGO=Django==1.7.10 OSCAR=django-oscar==1.0.2
-    - DJANGO=Django==1.7.10 OSCAR=django-oscar==1.1.1
-    - DJANGO=Django==1.8.4 OSCAR=django-oscar==1.1.1
+    - DJANGO=Django==1.8.18 OSCAR=django-oscar==1.2.2
+    - DJANGO=Django==1.10.7 OSCAR=django-oscar==1.2.2
+    - DJANGO=Django==1.11.2 OSCAR=django-oscar==1.2.2
+    - DJANGO=Django==1.8.18 OSCAR=django-oscar==1.3
+    - DJANGO=Django==1.10.7 OSCAR=django-oscar==1.3
+    - DJANGO=Django==1.11.2 OSCAR=django-oscar==1.3
+    - DJANGO=Django==1.8.18 OSCAR=django-oscar==1.4
+    - DJANGO=Django==1.10.7 OSCAR=django-oscar==1.4
+    - DJANGO=Django==1.11.2 OSCAR=django-oscar==1.4
+
 
 install:
   - pip install $DJANGO $OSCAR
