@@ -22,6 +22,12 @@ supports Django 1.8+, Python 3.6+ and Oscar 1.4+.
 .. _`django-oscar`: https://github.com/django-oscar/django-oscar
 
 
+Documentation
+=============
+
+https://django-oscar-adyen.readthedocs.io/en/latest/
+
+
 Installation
 ============
 
