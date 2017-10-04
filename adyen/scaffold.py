@@ -146,13 +146,11 @@ class Scaffold:
             field_specs[Constants.PAYMENT_BRAND_CODE] = (
                 order_data['brand_code']
             )
-            try:
+
+            if 'issuer_id' in order_data:
                 field_specs[Constants.PAYMENT_ISSUER_ID] = (
                     order_data['issuer_id']
                 )
-            except KeyError:
-                raise MissingFieldException(
-                    "Fields issuer_id missing from the order data.")
 
         if 'order' in order_data:
             field_specs.update(
