@@ -15,8 +15,8 @@ before_install:
   - export DJANGO_SETTINGS_MODULE=test.settings
 
 install:
-  - pip install -e .[test]
-  - pip install tox
+  - pip install -e .
+  - pip install -r requirements.txt
 
 
 script:
