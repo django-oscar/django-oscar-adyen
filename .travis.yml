@@ -7,7 +7,7 @@ python:
 matrix:
   fast_finish: true
   include:
-    - env: TOXENV=django11-oscar16
+    - env: TOXENV=django111-oscar16
     - env: TOXENV=django20-oscar16
     - env: TOXENV=django21-oscar16
 
