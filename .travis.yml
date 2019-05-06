@@ -1,19 +1,23 @@
 language: python
+dist: xenial
 
 python:
   - "3.6"
 
-env:
-  global:
-    - PYTHONPATH=.:$PYTHONPATH
-  matrix:
-    - DJANGO=Django==1.8.18 OSCAR=django-oscar==1.4
-    - DJANGO=Django==1.10.7 OSCAR=django-oscar==1.4
-    - DJANGO=Django==1.11.2 OSCAR=django-oscar==1.4
+matrix:
+  fast_finish: true
+  include:
+    - env: TOXENV=django11-oscar16
+    - env: TOXENV=django20-oscar16
+    - env: TOXENV=django21-oscar16
 
+before_install:
+  - export DJANGO_SETTINGS_MODULE=test.settings
 
 install:
-  - pip install $DJANGO $OSCAR
-  - pip install -r requirements.txt
+  - pip install -e .[test]
+  - pip install tox
 
-script: py.test tests
+
+script:
+  - tox
