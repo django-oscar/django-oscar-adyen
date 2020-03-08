@@ -50,7 +50,7 @@ class Facade:
 
     The ``Facade`` class exposes a set of public methods to be used by the
     plugin internally and by plugin users without having to deal with Adyen
-    internal mecanism (such as how to sign a request form or how to read a
+    internal mechanism (such as how to sign a request form or how to read a
     payment response).
 
     The first entry point is the payment form:
