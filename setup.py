@@ -14,7 +14,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'iptools==0.6.1',
-        'django-oscar>=1.6',
+        'django-oscar>=2.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
