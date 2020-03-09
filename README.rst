@@ -76,6 +76,12 @@ See `adyen.settings_config.FromSettingsConfig` for an example.
 
 Changes
 =======
+0.9.0 - unreleased
+------------------
+
+- Upgrade to Oscar 2.0.
+
+
 0.8.0 - unreleased
 ------------------
 
