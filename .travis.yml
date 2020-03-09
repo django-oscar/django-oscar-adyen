@@ -1,15 +1,16 @@
 language: python
 dist: xenial
 
-python:
-  - "3.6"
-
 matrix:
   fast_finish: true
   include:
-    - env: TOXENV=django111-oscar16
-    - env: TOXENV=django20-oscar16
-    - env: TOXENV=django21-oscar16
+    - python: 3.5
+      env: TOXENV=py35-django22
+    - python: 3.6
+      env: TOXENV=py36-django22
+    - python: 3.7
+      env: TOXENV=py37-django22
+
 
 before_install:
   - export DJANGO_SETTINGS_MODULE=test.settings
