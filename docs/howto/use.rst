@@ -18,7 +18,11 @@ Of course, one can use Oscar's ``get_class`` function instead::
 
    >>> from oscar.core.loading import get_class
    >>> Scaffold = get_class('adyen.scaffold', 'Scaffold')
-   >>> sclaffold = Scaffold()
+   
+#order_data default is None if you want to pass the order data you can initialize using constructor
+
+   >>> scaffold = Scaffold(order_data=payment_data)
+   
 
 ``Scaffold`` should be the only class used in your application, and you can
 consider it as the public interface of the plugin.
@@ -33,8 +37,8 @@ several fields as described in the Adyen HPP Documentation.
 You can get both from the scaffold::
 
    >>> sclaffold = Scaffold()
-   >>> form_action_url = scaffold.get_form_action(request)
-   >>> form_fields = scaffold.get_form_fields(request, payment_data)
+   >>> form_action_url = scaffold.get_form_action()
+   >>> form_fields = scaffold.get_form_fields()
 
 This should be used in the last view of your checkout before the payment return
 view - for example, in ``get_context_data`` to add the form URL and form
