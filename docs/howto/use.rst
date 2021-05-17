@@ -18,7 +18,7 @@ Of course, one can use Oscar's ``get_class`` function instead::
 
    >>> from oscar.core.loading import get_class
    >>> Scaffold = get_class('adyen.scaffold', 'Scaffold')
-   >>> sclaffold = Scaffold()
+   >>> scaffold = Scaffold()
 
 ``Scaffold`` should be the only class used in your application, and you can
 consider it as the public interface of the plugin.
