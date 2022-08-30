@@ -120,7 +120,7 @@ class DummyConfigClass(AbstractAdyenConfig):
 @override_settings(ADYEN_CONFIG_CLASS='tests.test_config.DummyConfigClass')
 class CustomConfigClassTestCase(TestCase):
     """
-    This test case checks that it's possible to replace the FromSettings confic class
+    This test case checks that it's possible to replace the FromSettings config class
     by one's own, and that it is used to fetch values as expected.
     """
 

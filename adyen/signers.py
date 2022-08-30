@@ -43,7 +43,7 @@ class AbstractSigner:
         appropriate signature field.
     * :meth:`compute_hash`: take a signature string and compute its hash value.
 
-    These methods are not implementd by the :class:`AbstractSigner`, therefore
+    These methods are not implemented by the :class:`AbstractSigner`, therefore
     subclasses **must** implement them.
     """
     def __init__(self, secret_key):
@@ -328,7 +328,7 @@ class HMACSha256(AbstractSigner):
         * We sort by key the valid keys (see :func:`is_valid_key`),
         * Both keys and values are escaped (see :func:`signature_escape`),
         * Then keys are joined by ``:``; same for the values,
-        * And these two strings are joined by anoter ``:``.
+        * And these two strings are joined by another ``:``.
 
         There is no such thing as a hard-coded defined order of keys: if a key
         is present, then it is used to sign the fields. This is much more
