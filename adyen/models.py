@@ -5,7 +5,7 @@ from django.db import models
 from django.utils import timezone
 from oscar.core.loading import get_class
 
-Constants = get_class('adyen.gateway', 'Constants')
+from .constants import Constants
 
 
 class AdyenTransaction(models.Model):
